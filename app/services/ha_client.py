@@ -9,13 +9,19 @@ logger = logging.getLogger('ha_cursor_agent')
 class HomeAssistantClient:
     """Client for Home Assistant API"""
     
-    def __init__(self):
+    def __init__(self, token: str = None):
         self.url = os.getenv('HA_URL', 'http://supervisor/core')
-        self.token = os.getenv('HA_TOKEN', '')
+        # Use provided token or fall back to environment token
+        self.token = token or os.getenv('HA_TOKEN', '') or os.getenv('SUPERVISOR_TOKEN', '')
         self.headers = {
             'Authorization': f'Bearer {self.token}',
             'Content-Type': 'application/json',
         }
+    
+    def set_token(self, token: str):
+        """Update token for requests"""
+        self.token = token
+        self.headers['Authorization'] = f'Bearer {token}'
     
     async def _request(self, method: str, endpoint: str, data: Optional[Dict] = None) -> Dict:
         """Make HTTP request to HA API"""

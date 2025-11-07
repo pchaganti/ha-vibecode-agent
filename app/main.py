@@ -37,31 +37,33 @@ app.add_middleware(
 # Security
 security = HTTPBearer()
 
-# Get HA Token from environment
-SUPERVISOR_TOKEN = os.getenv('SUPERVISOR_TOKEN', '')
+# Get tokens from environment
+SUPERVISOR_TOKEN = os.getenv('SUPERVISOR_TOKEN', '')  # Auto-provided by HA when running as add-on
 DEV_TOKEN = os.getenv('HA_TOKEN', '')  # For local development only
 
 def verify_token(credentials: HTTPAuthorizationCredentials = Security(security)):
     """
     Verify API token.
     
-    In add-on mode (SUPERVISOR_TOKEN exists):
-    - Accepts any token from user (their Long-Lived Access Token)
-    - HA API will validate it when making requests
+    Add-on mode (when SUPERVISOR_TOKEN exists):
+    - Accept any token - user already authenticated in HA
+    - Agent uses SUPERVISOR_TOKEN for internal HA API calls
     
-    In development mode (no SUPERVISOR_TOKEN):
-    - Requires matching DEV_TOKEN from environment
+    Development mode (no SUPERVISOR_TOKEN):
+    - Validate against DEV_TOKEN environment variable
     """
     token = credentials.credentials
     
     if SUPERVISOR_TOKEN:
-        # Add-on mode: accept any token
-        # User provides their own Long-Lived Access Token
-        # HA API will validate it when we make requests
+        # Running as HA add-on: accept any valid-looking token
+        # User provides their Long-Lived Access Token for identification
+        # Internal HA API calls use SUPERVISOR_TOKEN (full permissions)
+        if len(token) < 20:  # Basic sanity check
+            raise HTTPException(status_code=401, detail="Invalid token format")
         return token
     else:
-        # Development mode: check against DEV_TOKEN
-        if token != DEV_TOKEN:
+        # Development mode: strict token check
+        if not DEV_TOKEN or token != DEV_TOKEN:
             raise HTTPException(status_code=401, detail="Invalid authentication token")
         return token
 
