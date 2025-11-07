@@ -112,15 +112,20 @@ Once the add-on is installed and running, use this simple prompt:
 I have HA Cursor Agent running on my Home Assistant.
 
 Token: YOUR_LONG_LIVED_ACCESS_TOKEN
-API Base: http://homeassistant.local:8099
+API Base: http://YOUR_HA_IP:8099
 
 Please read the AI instructions from:
-http://homeassistant.local:8099/api/ai/instructions
+http://YOUR_HA_IP:8099/api/ai/instructions
 
 Confirm you're ready and understand the safety protocols.
 
 My request: [describe what you want]
 ```
+
+**Finding YOUR_HA_IP:**
+- Open Home Assistant: **Settings** → **System** → **Network**
+- Look for **IPv4 address** (e.g., `192.168.68.62`)
+- Or use `homeassistant.local` if mDNS works on your network
 
 **That's it!** Cursor AI will fetch the instructions from your local add-on (no internet needed) and follow all safety protocols.
 
