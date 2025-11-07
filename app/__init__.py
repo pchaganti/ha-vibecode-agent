@@ -1,0 +1,2 @@
+"""HA Cursor Agent Application"""
+

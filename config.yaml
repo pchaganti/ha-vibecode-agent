@@ -1,0 +1,47 @@
+# Home Assistant Add-on Configuration
+name: HA Cursor Agent
+version: "1.0.0"
+slug: home_assistant_cursor_agent
+description: AI Agent API for Home Assistant - enables Cursor AI to manage HA configuration
+url: https://github.com/Coolver/home-assistant-cursor-agent
+arch:
+  - aarch64
+  - amd64
+  - armhf
+  - armv7
+  - i386
+init: false
+startup: application
+boot: auto
+host_network: false
+hassio_api: true
+homeassistant_api: true
+auth_api: true
+
+options:
+  port: 8099
+  log_level: info
+  enable_git_versioning: true
+  auto_backup: true
+  max_backups: 50
+
+schema:
+  port: int
+  log_level: list(debug|info|warning|error)
+  enable_git_versioning: bool
+  auto_backup: bool
+  max_backups: int
+
+ports:
+  8099/tcp: 8099
+
+ports_description:
+  8099/tcp: HA Cursor Agent API
+
+map:
+  - config:rw
+
+ingress: false
+panel_icon: mdi:robot
+panel_title: HA Cursor Agent
+

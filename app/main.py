@@ -1,0 +1,102 @@
+"""
+HA Cursor Agent - FastAPI Application
+Enables Cursor AI to manage Home Assistant configuration
+"""
+import os
+import logging
+from fastapi import FastAPI, HTTPException, Depends, Security
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+
+from app.api import files, entities, helpers, automations, scripts, system, backup, logs as logs_api
+from app.utils.logger import setup_logger
+
+# Setup logging
+LOG_LEVEL = os.getenv('LOG_LEVEL', 'info').upper()
+logger = setup_logger('ha_cursor_agent', LOG_LEVEL)
+
+# FastAPI app
+app = FastAPI(
+    title="HA Cursor Agent API",
+    description="AI Agent API for Home Assistant - enables Cursor AI to manage HA configuration",
+    version="1.0.0",
+    docs_url="/docs",
+    redoc_url="/redoc"
+)
+
+# CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Security
+security = HTTPBearer()
+
+# Get HA Token from environment
+HA_TOKEN = os.getenv('HA_TOKEN', '')
+
+def verify_token(credentials: HTTPAuthorizationCredentials = Security(security)):
+    """Verify API token"""
+    if credentials.credentials != HA_TOKEN:
+        raise HTTPException(status_code=401, detail="Invalid authentication token")
+    return credentials.credentials
+
+# Include routers
+app.include_router(files.router, prefix="/api/files", tags=["Files"], dependencies=[Depends(verify_token)])
+app.include_router(entities.router, prefix="/api/entities", tags=["Entities"], dependencies=[Depends(verify_token)])
+app.include_router(helpers.router, prefix="/api/helpers", tags=["Helpers"], dependencies=[Depends(verify_token)])
+app.include_router(automations.router, prefix="/api/automations", tags=["Automations"], dependencies=[Depends(verify_token)])
+app.include_router(scripts.router, prefix="/api/scripts", tags=["Scripts"], dependencies=[Depends(verify_token)])
+app.include_router(system.router, prefix="/api/system", tags=["System"], dependencies=[Depends(verify_token)])
+app.include_router(backup.router, prefix="/api/backup", tags=["Backup"], dependencies=[Depends(verify_token)])
+app.include_router(logs_api.router, prefix="/api/logs", tags=["Logs"], dependencies=[Depends(verify_token)])
+
+@app.get("/")
+async def root():
+    """Root endpoint with API information"""
+    return {
+        "name": "HA Cursor Agent API",
+        "version": "1.0.0",
+        "description": "AI Agent API for Home Assistant",
+        "docs": "/docs",
+        "endpoints": {
+            "files": "/api/files",
+            "entities": "/api/entities",
+            "helpers": "/api/helpers",
+            "automations": "/api/automations",
+            "scripts": "/api/scripts",
+            "system": "/api/system",
+            "backup": "/api/backup",
+            "logs": "/api/logs"
+        }
+    }
+
+@app.get("/api/health")
+async def health():
+    """Health check endpoint (no auth required)"""
+    return {
+        "status": "healthy",
+        "version": "1.0.0",
+        "config_path": os.getenv('CONFIG_PATH', '/config'),
+        "git_enabled": os.getenv('ENABLE_GIT', 'false') == 'true'
+    }
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request, exc):
+    """Global exception handler"""
+    logger.error(f"Unhandled exception: {exc}", exc_info=True)
+    return JSONResponse(
+        status_code=500,
+        content={"detail": f"Internal server error: {str(exc)}"}
+    )
+
+if __name__ == "__main__":
+    import uvicorn
+    port = int(os.getenv('PORT', 8099))
+    uvicorn.run(app, host="0.0.0.0", port=port)
+
