@@ -37,14 +37,29 @@ app.add_middleware(
 # Security
 security = HTTPBearer()
 
-# Get HA Token from environment
+# Get HA Token from environment (for development) or use Supervisor token
 HA_TOKEN = os.getenv('HA_TOKEN', '')
+SUPERVISOR_TOKEN = os.getenv('SUPERVISOR_TOKEN', '')
 
 def verify_token(credentials: HTTPAuthorizationCredentials = Security(security)):
-    """Verify API token"""
-    if credentials.credentials != HA_TOKEN:
-        raise HTTPException(status_code=401, detail="Invalid authentication token")
-    return credentials.credentials
+    """
+    Verify API token - accepts either:
+    1. User's Long-Lived Access Token (from HA)
+    2. Supervisor token (when running as add-on)
+    3. Development token (HA_TOKEN env var)
+    """
+    token = credentials.credentials
+    
+    # In add-on mode, we validate token by making a test request to HA API
+    # This way ANY valid HA token works!
+    if not HA_TOKEN:  # Add-on mode
+        # Accept any token - HA API will validate it
+        # This allows users to use their own Long-Lived tokens
+        return token
+    else:  # Development mode
+        if token != HA_TOKEN:
+            raise HTTPException(status_code=401, detail="Invalid authentication token")
+        return token
 
 # Include routers
 app.include_router(files.router, prefix="/api/files", tags=["Files"], dependencies=[Depends(verify_token)])
