@@ -106,23 +106,23 @@ This add-on enables **Cursor AI to autonomously manage your Home Assistant** thr
 
 ### How to Connect Cursor AI
 
-Once the add-on is installed and running, give Cursor AI this simple prompt:
+Once the add-on is installed and running, use this simple prompt:
 
 ```
 I have HA Cursor Agent running on my Home Assistant.
 
 Token: YOUR_LONG_LIVED_ACCESS_TOKEN
-API URL: http://homeassistant.local:8099
+API Base: http://homeassistant.local:8099
 
-Please read the full instructions at:
-https://github.com/Coolver/home-assistant-cursor-agent/blob/main/DOCS.md#cursor-ai-instructions
+Please read the AI instructions from:
+http://homeassistant.local:8099/api/ai/instructions
 
-Confirm you understand the safety protocols and are ready to help.
+Confirm you're ready and understand the safety protocols.
 
 My request: [describe what you want]
 ```
 
-**That's it!** Cursor AI will read the detailed instructions from DOCS.md and follow all safety protocols automatically.
+**That's it!** Cursor AI will fetch the instructions from your local add-on (no internet needed) and follow all safety protocols.
 
 ### Example Prompts
 

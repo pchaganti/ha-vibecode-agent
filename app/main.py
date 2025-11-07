@@ -9,7 +9,7 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from app.api import files, entities, helpers, automations, scripts, system, backup, logs as logs_api
+from app.api import files, entities, helpers, automations, scripts, system, backup, logs, ai_instructions
 from app.utils.logger import setup_logger
 
 # Setup logging
@@ -54,16 +54,18 @@ app.include_router(automations.router, prefix="/api/automations", tags=["Automat
 app.include_router(scripts.router, prefix="/api/scripts", tags=["Scripts"], dependencies=[Depends(verify_token)])
 app.include_router(system.router, prefix="/api/system", tags=["System"], dependencies=[Depends(verify_token)])
 app.include_router(backup.router, prefix="/api/backup", tags=["Backup"], dependencies=[Depends(verify_token)])
-app.include_router(logs_api.router, prefix="/api/logs", tags=["Logs"], dependencies=[Depends(verify_token)])
+app.include_router(logs.router, prefix="/api/logs", tags=["Logs"], dependencies=[Depends(verify_token)])
+app.include_router(ai_instructions.router, prefix="/api/ai")
 
 @app.get("/")
 async def root():
     """Root endpoint with API information"""
     return {
         "name": "HA Cursor Agent API",
-        "version": "1.0.0",
+        "version": "1.0.1",
         "description": "AI Agent API for Home Assistant",
         "docs": "/docs",
+        "ai_instructions": "/api/ai/instructions",
         "endpoints": {
             "files": "/api/files",
             "entities": "/api/entities",
@@ -72,7 +74,8 @@ async def root():
             "scripts": "/api/scripts",
             "system": "/api/system",
             "backup": "/api/backup",
-            "logs": "/api/logs"
+            "logs": "/api/logs",
+            "ai": "/api/ai/instructions"
         }
     }
 
@@ -81,9 +84,10 @@ async def health():
     """Health check endpoint (no auth required)"""
     return {
         "status": "healthy",
-        "version": "1.0.0",
+        "version": "1.0.1",
         "config_path": os.getenv('CONFIG_PATH', '/config'),
-        "git_enabled": os.getenv('ENABLE_GIT', 'false') == 'true'
+        "git_enabled": os.getenv('ENABLE_GIT', 'false') == 'true',
+        "ai_instructions": "/api/ai/instructions"
     }
 
 @app.exception_handler(Exception)
