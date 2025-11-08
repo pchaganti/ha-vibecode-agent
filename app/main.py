@@ -21,7 +21,7 @@ logger = setup_logger('ha_cursor_agent', LOG_LEVEL)
 app = FastAPI(
     title="HA Cursor Agent API",
     description="AI Agent API for Home Assistant - enables Cursor AI to manage HA configuration",
-    version="1.0.2",
+    version="1.0.3",
     docs_url="/docs",
     redoc_url="/redoc"
 )
@@ -43,6 +43,16 @@ SUPERVISOR_TOKEN = os.getenv('SUPERVISOR_TOKEN', '')  # Auto-provided by HA when
 DEV_TOKEN = os.getenv('HA_TOKEN', '')  # For local development only
 HA_URL = os.getenv('HA_URL', 'http://supervisor/core')
 
+# Log token availability at startup
+supervisor_token_status = "PRESENT" if SUPERVISOR_TOKEN else "MISSING"
+dev_token_status = "PRESENT" if DEV_TOKEN else "MISSING"
+logger.info(f"=== Token Configuration ===")
+logger.info(f"SUPERVISOR_TOKEN: {supervisor_token_status}")
+logger.info(f"DEV_TOKEN (HA_TOKEN): {dev_token_status}")
+logger.info(f"HA_URL: {HA_URL}")
+logger.info(f"Mode: {'Add-on (using SUPERVISOR_TOKEN for HA API)' if SUPERVISOR_TOKEN else 'Development (using DEV_TOKEN)'}")
+logger.info(f"============================")
+
 async def verify_token(credentials: HTTPAuthorizationCredentials = Security(security)):
     """
     Verify API token by validating it against Home Assistant API.
@@ -56,22 +66,29 @@ async def verify_token(credentials: HTTPAuthorizationCredentials = Security(secu
     - Validates against DEV_TOKEN environment variable
     """
     token = credentials.credentials
+    token_preview = f"{token[:20]}..." if token else "EMPTY"
     
     if SUPERVISOR_TOKEN:
         # Add-on mode: validate token against HA API
+        logger.debug(f"Add-on mode: Validating user token {token_preview} against HA API")
         try:
             async with aiohttp.ClientSession() as session:
                 # Test token by calling HA API
+                test_url = f"{HA_URL}/api/"
+                logger.debug(f"Testing token at: {test_url}")
                 async with session.get(
-                    f"{HA_URL}/api/",
+                    test_url,
                     headers={"Authorization": f"Bearer {token}"},
                     timeout=aiohttp.ClientTimeout(total=5)
                 ) as response:
+                    response_text = await response.text()
+                    logger.debug(f"HA API response: {response.status} - {response_text[:100]}")
+                    
                     if response.status == 200:
-                        logger.debug(f"Token validated successfully")
+                        logger.info(f"✅ Token validated successfully: {token_preview}")
                         return token
                     else:
-                        logger.warning(f"Invalid token: HA API returned {response.status}")
+                        logger.warning(f"❌ Invalid token: HA API returned {response.status} - {response_text[:200]}")
                         raise HTTPException(status_code=401, detail="Invalid Home Assistant token")
         except aiohttp.ClientError as e:
             logger.error(f"Failed to validate token: {e}")
@@ -83,8 +100,11 @@ async def verify_token(credentials: HTTPAuthorizationCredentials = Security(secu
             raise HTTPException(status_code=401, detail="Token validation failed")
     else:
         # Development mode: strict token check
+        logger.debug(f"Development mode: Checking token against DEV_TOKEN")
         if not DEV_TOKEN or token != DEV_TOKEN:
+            logger.warning(f"❌ Token mismatch in development mode")
             raise HTTPException(status_code=401, detail="Invalid authentication token")
+        logger.info(f"✅ Token validated in development mode")
         return token
 
 # Include routers
@@ -103,7 +123,7 @@ async def root():
     """Root endpoint with API information"""
     return {
         "name": "HA Cursor Agent API",
-        "version": "1.0.2",
+        "version": "1.0.3",
         "description": "AI Agent API for Home Assistant",
         "docs": "/docs",
         "ai_instructions": "/api/ai/instructions",
@@ -125,7 +145,7 @@ async def health():
     """Health check endpoint (no auth required)"""
     return {
         "status": "healthy",
-        "version": "1.0.2",
+        "version": "1.0.3",
         "config_path": os.getenv('CONFIG_PATH', '/config'),
         "git_enabled": os.getenv('ENABLE_GIT', 'false') == 'true',
         "ai_instructions": "/api/ai/instructions"

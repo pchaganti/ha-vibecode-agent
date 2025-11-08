@@ -52,3 +52,5 @@ This release focuses on fixing Raspberry Pi compatibility and improving the Curs
 
 If you encounter any issues, please use the rollback feature or report on GitHub.
 
+
+

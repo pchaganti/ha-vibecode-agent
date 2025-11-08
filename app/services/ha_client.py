@@ -17,6 +17,11 @@ class HomeAssistantClient:
             'Authorization': f'Bearer {self.token}',
             'Content-Type': 'application/json',
         }
+        
+        # Debug logging
+        token_source = "provided" if token else ("HA_TOKEN" if os.getenv('HA_TOKEN') else ("SUPERVISOR_TOKEN" if os.getenv('SUPERVISOR_TOKEN') else "none"))
+        token_preview = f"{self.token[:20]}..." if self.token else "EMPTY"
+        logger.info(f"HAClient initialized - URL: {self.url}, Token source: {token_source}, Token: {token_preview}")
     
     def set_token(self, token: str):
         """Update token for requests"""
@@ -26,6 +31,10 @@ class HomeAssistantClient:
     async def _request(self, method: str, endpoint: str, data: Optional[Dict] = None) -> Dict:
         """Make HTTP request to HA API"""
         url = f"{self.url}/api/{endpoint}"
+        
+        # Debug logging
+        token_preview = f"{self.token[:20]}..." if self.token else "EMPTY"
+        logger.debug(f"HA API Request: {method} {url}, Token: {token_preview}")
         
         try:
             async with aiohttp.ClientSession() as session:
@@ -38,9 +47,10 @@ class HomeAssistantClient:
                 ) as response:
                     if response.status >= 400:
                         text = await response.text()
-                        logger.error(f"HA API error: {response.status} - {text}")
+                        logger.error(f"HA API error: {response.status} - {text} | Token used: {token_preview}")
                         raise Exception(f"HA API error: {response.status} - {text}")
                     
+                    logger.debug(f"HA API success: {method} {url} -> {response.status}")
                     return await response.json()
         except aiohttp.ClientError as e:
             logger.error(f"Connection error to HA: {e}")
