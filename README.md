@@ -6,7 +6,7 @@ Stop manually writing YAML configurations! This add-on enables Cursor AI to anal
 
 **Real example:** User says *"Install smart climate control"* → AI analyzes 7 TRVs, creates 10 automations + 9 helpers + 10 sensors + 5 scripts, deploys everything, and it just works!
 
-[![Version](https://img.shields.io/badge/version-1.0.7-blue.svg)](https://github.com/Coolver/home-assistant-cursor-agent)
+[![Version](https://img.shields.io/badge/version-1.0.9-blue.svg)](https://github.com/Coolver/home-assistant-cursor-agent)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![MCP Package](https://img.shields.io/npm/v/@coolver/mcp-home-assistant?label=MCP%20Package)](https://www.npmjs.com/package/@coolver/mcp-home-assistant)
 
@@ -88,14 +88,18 @@ Stop manually writing YAML configurations! This add-on enables Cursor AI to anal
 ### 3. Start
 1. **Configuration** tab → Keep defaults → **SAVE**
 2. **Info** tab → **Start on boot: ON** → **START**
-3. Test: `http://homeassistant.local:8099/api/health`
+3. **Wait for startup** (~10 seconds)
 
-### 4. Get Token
-1. Click your **Profile Name** (bottom left) → **Security**
-2. **Refresh Tokens** section → **Long-lived access tokens**
-3. **CREATE TOKEN**
-4. Name: `HA Cursor Agent`
-5. **Copy token** and save it securely
+### 4. Get API Key
+1. Look in **Home Assistant Sidebar** → new panel **"🔑 API Key"** appears
+2. **Click** on "API Key" panel
+3. You'll see a beautiful interface with your API key
+4. **Click "Copy to Clipboard"** button
+5. Save it securely (you'll need it for Cursor)
+
+**Alternative ways to get your key:**
+- View in add-on **Logs** (shown on first start)
+- Read file: `/config/.ha_cursor_agent_key`
 
 ### 5. Test API
 Open `http://homeassistant.local:8099/docs` and explore! 🎉
@@ -122,7 +126,13 @@ This add-on enables **Cursor AI to autonomously manage your Home Assistant** thr
 
 **New recommended way using Model Context Protocol (MCP):**
 
-#### 1. Configure Cursor
+#### 1. Get Your API Key
+
+Open Home Assistant Sidebar → **🔑 API Key** → Copy your key
+
+(Or check add-on Logs on first start)
+
+#### 2. Configure Cursor
 
 Add to your `~/.cursor/mcp.json`:
 
@@ -134,7 +144,7 @@ Add to your `~/.cursor/mcp.json`:
       "args": ["-y", "@coolver/mcp-home-assistant@latest"],
       "env": {
         "HA_AGENT_URL": "http://homeassistant.local:8099",
-        "HA_TOKEN": "YOUR_LONG_LIVED_ACCESS_TOKEN"
+        "HA_TOKEN": "YOUR_API_KEY_HERE"
       }
     }
   }

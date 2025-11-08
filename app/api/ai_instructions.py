@@ -12,7 +12,7 @@ AI_INSTRUCTIONS = """
 HA CURSOR AGENT - INSTRUCTIONS FOR AI ASSISTANTS
 ================================================================================
 
-Version: 1.0.8
+Version: 1.0.9
 Base URL: http://homeassistant.local:8099
 Interactive Docs: http://homeassistant.local:8099/docs
 

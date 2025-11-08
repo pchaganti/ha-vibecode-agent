@@ -5,10 +5,12 @@ Enables Cursor AI to manage Home Assistant configuration
 import os
 import logging
 import aiohttp
+import secrets
+from pathlib import Path
 from fastapi import FastAPI, HTTPException, Depends, Security
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, HTMLResponse
 
 from app.api import files, entities, helpers, automations, scripts, system, backup, logs, ai_instructions
 from app.utils.logger import setup_logger
@@ -17,11 +19,14 @@ from app.utils.logger import setup_logger
 LOG_LEVEL = os.getenv('LOG_LEVEL', 'info').upper()
 logger = setup_logger('ha_cursor_agent', LOG_LEVEL)
 
+# Agent version
+AGENT_VERSION = "1.0.9"
+
 # FastAPI app
 app = FastAPI(
     title="HA Cursor Agent API",
     description="AI Agent API for Home Assistant - enables Cursor AI to manage HA configuration",
-    version="1.0.8",
+    version=AGENT_VERSION,
     docs_url="/docs",
     redoc_url="/redoc"
 )
@@ -38,13 +43,92 @@ app.add_middleware(
 # Security
 security = HTTPBearer()
 
-# Get tokens from environment
+# Get tokens and configuration from environment
 SUPERVISOR_TOKEN = os.getenv('SUPERVISOR_TOKEN', '')  # Auto-provided by HA when running as add-on
 DEV_TOKEN = os.getenv('HA_TOKEN', '')  # For local development only
 HA_URL = os.getenv('HA_URL', 'http://supervisor/core')
 
+# API Key configuration
+API_KEY_FROM_CONFIG = os.getenv('API_KEY', '').strip()
+API_KEY_FILE = Path('/config/.ha_cursor_agent_key')
+SEND_NOTIFICATION = os.getenv('SEND_NOTIFICATION_ON_GENERATE', 'false').lower() == 'true'
+
+# Global variable for API key
+API_KEY = None
+
+
+async def send_notification(api_key: str):
+    """Send persistent notification to Home Assistant"""
+    try:
+        async with aiohttp.ClientSession() as session:
+            await session.post(
+                f"{HA_URL}/api/services/persistent_notification/create",
+                headers={
+                    'Authorization': f'Bearer {SUPERVISOR_TOKEN}',
+                    'Content-Type': 'application/json'
+                },
+                json={
+                    'message': f'**HA Cursor Agent API Key Generated:**\n\n`{api_key}`\n\nAdd to `~/.cursor/mcp.json` or view in Sidebar → API Key',
+                    'title': '🔑 HA Cursor Agent API Key',
+                    'notification_id': 'ha_cursor_agent_key'
+                },
+                timeout=aiohttp.ClientTimeout(total=10)
+            )
+        logger.info("📧 Notification sent to Home Assistant")
+    except Exception as e:
+        logger.warning(f"Failed to send notification: {e}")
+
+
+def get_or_generate_api_key():
+    """
+    Get or generate API key.
+    
+    Priority:
+    1. API key from add-on configuration (API_KEY env var)
+    2. Existing API key from file
+    3. Generate new API key and save to file
+    """
+    # 1. Check config
+    if API_KEY_FROM_CONFIG:
+        logger.info("✅ Using API key from add-on configuration")
+        return API_KEY_FROM_CONFIG
+    
+    # 2. Check file
+    if API_KEY_FILE.exists():
+        api_key = API_KEY_FILE.read_text().strip()
+        logger.info("✅ Using existing API key from file")
+        return api_key
+    
+    # 3. Generate new
+    api_key = secrets.token_urlsafe(32)  # 256 bits of entropy
+    
+    try:
+        API_KEY_FILE.write_text(api_key)
+        logger.info(f"💾 API key saved to {API_KEY_FILE}")
+    except Exception as e:
+        logger.warning(f"Failed to save API key to file: {e}")
+    
+    # Log the key
+    logger.info("=" * 70)
+    logger.info("🔑 NEW API KEY GENERATED")
+    logger.info("=" * 70)
+    logger.info(f"API Key: {api_key}")
+    logger.info("")
+    logger.info("📋 Copy this key to ~/.cursor/mcp.json:")
+    logger.info('  "env": {')
+    logger.info(f'    "HA_TOKEN": "{api_key}"')
+    logger.info('  }')
+    logger.info("")
+    logger.info("💡 You can also view it anytime in: Sidebar → API Key")
+    logger.info("=" * 70)
+    
+    return api_key
+
+
+# Initialize API key
+API_KEY = get_or_generate_api_key()
+
 # Log startup configuration
-AGENT_VERSION = "1.0.8"
 supervisor_token_status = "PRESENT" if SUPERVISOR_TOKEN else "MISSING"
 dev_token_status = "PRESENT" if DEV_TOKEN else "MISSING"
 
@@ -55,43 +139,50 @@ logger.info(f"SUPERVISOR_TOKEN: {supervisor_token_status}")
 logger.info(f"DEV_TOKEN (HA_TOKEN): {dev_token_status}")
 logger.info(f"HA_URL: {HA_URL}")
 logger.info(f"Mode: {'Add-on (using SUPERVISOR_TOKEN for HA API)' if SUPERVISOR_TOKEN else 'Development (using DEV_TOKEN)'}")
+logger.info(f"API Key: {'Custom (from config)' if API_KEY_FROM_CONFIG else 'Auto-generated'}")
 logger.info(f"=================================")
+
+# Send notification if configured and key was just generated
+if SEND_NOTIFICATION and not API_KEY_FROM_CONFIG and not API_KEY_FILE.exists():
+    import asyncio
+    # Schedule notification after startup
+    @app.on_event("startup")
+    async def startup_notification():
+        await send_notification(API_KEY)
+
 
 async def verify_token(credentials: HTTPAuthorizationCredentials = Security(security)):
     """
-    Verify API token.
+    Verify API key.
     
     Add-on mode (SUPERVISOR_TOKEN exists):
-    - Simply checks that a token is provided (any valid HA token)
+    - Validates against configured API_KEY
     - Agent uses SUPERVISOR_TOKEN internally for all HA API operations
-    - No need to validate user token through HA API (supervisor URL doesn't accept user tokens)
     
     Development mode (no SUPERVISOR_TOKEN):
     - Validates against DEV_TOKEN environment variable
     """
     token = credentials.credentials
-    token_preview = f"{token[:20]}..." if token else "EMPTY"
+    token_preview = f"{token[:20]}..." if len(token) > 20 else token
     
     if SUPERVISOR_TOKEN:
-        # Add-on mode: Accept any token that looks valid
-        # Agent will use SUPERVISOR_TOKEN for actual HA API calls
-        logger.debug(f"Add-on mode: Accepting token {token_preview}")
+        # Add-on mode: Check against API_KEY
+        if token != API_KEY:
+            logger.warning(f"❌ Invalid API key: {token_preview}")
+            raise HTTPException(status_code=401, detail="Invalid API key")
         
-        if not token or len(token) < 20:
-            logger.warning(f"❌ Token too short or empty")
-            raise HTTPException(status_code=401, detail="Invalid or missing token")
-        
-        logger.info(f"✅ Token accepted in add-on mode: {token_preview}")
+        logger.debug(f"✅ API key validated: {token_preview}")
         logger.debug(f"Agent will use SUPERVISOR_TOKEN for HA API operations")
         return token
     else:
-        # Development mode: strict token check against DEV_TOKEN
+        # Development mode: Check against DEV_TOKEN
         logger.debug(f"Development mode: Checking token against DEV_TOKEN")
         if not DEV_TOKEN or token != DEV_TOKEN:
             logger.warning(f"❌ Token mismatch in development mode")
             raise HTTPException(status_code=401, detail="Invalid authentication token")
         logger.info(f"✅ Token validated in development mode")
         return token
+
 
 # Include routers
 app.include_router(files.router, prefix="/api/files", tags=["Files"], dependencies=[Depends(verify_token)])
@@ -104,27 +195,355 @@ app.include_router(backup.router, prefix="/api/backup", tags=["Backup"], depende
 app.include_router(logs.router, prefix="/api/logs", tags=["Logs"], dependencies=[Depends(verify_token)])
 app.include_router(ai_instructions.router, prefix="/api/ai")
 
-@app.get("/")
-async def root():
-    """Root endpoint with API information"""
-    return {
-        "name": "HA Cursor Agent API",
-        "version": AGENT_VERSION,
-        "description": "AI Agent API for Home Assistant",
-        "docs": "/docs",
-        "ai_instructions": "/api/ai/instructions",
-        "endpoints": {
-            "files": "/api/files",
-            "entities": "/api/entities",
-            "helpers": "/api/helpers",
-            "automations": "/api/automations",
-            "scripts": "/api/scripts",
-            "system": "/api/system",
-            "backup": "/api/backup",
-            "logs": "/api/logs",
-            "ai": "/api/ai/instructions"
-        }
-    }
+
+@app.get("/", response_class=HTMLResponse)
+async def ingress_panel():
+    """Ingress panel - shows API key and setup instructions"""
+    
+    # Mask API key for display (show first 8 and last 8 chars)
+    masked_key = f"{API_KEY[:8]}...{API_KEY[-8:]}" if len(API_KEY) > 16 else API_KEY
+    
+    html_content = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>HA Cursor Agent - API Key</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <style>
+            * {{
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+            }}
+            
+            body {{
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+                padding: 20px;
+                background: #0d1117;
+                color: #c9d1d9;
+                line-height: 1.6;
+            }}
+            
+            .container {{
+                max-width: 800px;
+                margin: 0 auto;
+            }}
+            
+            h1 {{
+                color: #58a6ff;
+                margin-bottom: 10px;
+                display: flex;
+                align-items: center;
+                gap: 12px;
+            }}
+            
+            .version {{
+                font-size: 14px;
+                color: #8b949e;
+                font-weight: normal;
+                background: #161b22;
+                padding: 4px 12px;
+                border-radius: 12px;
+            }}
+            
+            .card {{
+                background: #161b22;
+                border: 1px solid #30363d;
+                border-radius: 8px;
+                padding: 24px;
+                margin: 20px 0;
+            }}
+            
+            .card h2 {{
+                color: #58a6ff;
+                font-size: 18px;
+                margin-bottom: 16px;
+                display: flex;
+                align-items: center;
+                gap: 8px;
+            }}
+            
+            .key-display {{
+                background: #0d1117;
+                border: 1px solid #30363d;
+                border-radius: 6px;
+                padding: 16px;
+                font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, monospace;
+                font-size: 14px;
+                word-break: break-all;
+                color: #79c0ff;
+                margin-bottom: 12px;
+                position: relative;
+            }}
+            
+            .key-display.masked {{
+                cursor: pointer;
+                user-select: none;
+            }}
+            
+            .key-display.masked:hover {{
+                background: #161b22;
+            }}
+            
+            .key-actions {{
+                display: flex;
+                gap: 8px;
+                flex-wrap: wrap;
+            }}
+            
+            button {{
+                background: #238636;
+                color: white;
+                border: none;
+                padding: 8px 16px;
+                border-radius: 6px;
+                cursor: pointer;
+                font-size: 14px;
+                font-weight: 500;
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+                transition: background 0.2s;
+            }}
+            
+            button:hover {{
+                background: #2ea043;
+            }}
+            
+            button.secondary {{
+                background: #21262d;
+                border: 1px solid #30363d;
+            }}
+            
+            button.secondary:hover {{
+                background: #30363d;
+            }}
+            
+            .code-block {{
+                background: #0d1117;
+                border: 1px solid #30363d;
+                border-radius: 6px;
+                padding: 16px;
+                font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, monospace;
+                font-size: 13px;
+                overflow-x: auto;
+                margin: 12px 0;
+            }}
+            
+            .code-block code {{
+                color: #79c0ff;
+            }}
+            
+            .info-box {{
+                background: #1c2128;
+                border-left: 3px solid #58a6ff;
+                padding: 12px 16px;
+                margin: 12px 0;
+                border-radius: 4px;
+            }}
+            
+            .info-box.warning {{
+                border-left-color: #d29922;
+            }}
+            
+            .info-box strong {{
+                color: #58a6ff;
+            }}
+            
+            .step {{
+                display: flex;
+                gap: 12px;
+                margin: 16px 0;
+            }}
+            
+            .step-number {{
+                background: #238636;
+                color: white;
+                width: 28px;
+                height: 28px;
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-weight: bold;
+                flex-shrink: 0;
+            }}
+            
+            .step-content {{
+                flex: 1;
+            }}
+            
+            .success-message {{
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: #238636;
+                color: white;
+                padding: 12px 20px;
+                border-radius: 6px;
+                box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+                display: none;
+                animation: slideIn 0.3s ease;
+            }}
+            
+            @keyframes slideIn {{
+                from {{
+                    transform: translateX(400px);
+                    opacity: 0;
+                }}
+                to {{
+                    transform: translateX(0);
+                    opacity: 1;
+                }}
+            }}
+            
+            a {{
+                color: #58a6ff;
+                text-decoration: none;
+            }}
+            
+            a:hover {{
+                text-decoration: underline;
+            }}
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h1>
+                🔑 HA Cursor Agent
+                <span class="version">v{AGENT_VERSION}</span>
+            </h1>
+            
+            <div class="card">
+                <h2>📋 Your API Key</h2>
+                <div class="key-display masked" id="keyDisplay" onclick="toggleKey()">
+                    {masked_key} <span style="color: #8b949e; font-size: 12px;">← Click to reveal</span>
+                </div>
+                <div class="key-actions">
+                    <button onclick="copyKey()">
+                        📋 Copy to Clipboard
+                    </button>
+                    <button class="secondary" onclick="toggleKey()">
+                        👁️ Show/Hide
+                    </button>
+                </div>
+            </div>
+            
+            <div class="card">
+                <h2>🚀 Setup Instructions</h2>
+                
+                <div class="step">
+                    <div class="step-number">1</div>
+                    <div class="step-content">
+                        <strong>Copy your API key</strong> using the button above
+                    </div>
+                </div>
+                
+                <div class="step">
+                    <div class="step-number">2</div>
+                    <div class="step-content">
+                        <strong>Add to Cursor configuration</strong><br>
+                        Open <code>~/.cursor/mcp.json</code> and add:
+                        <div class="code-block"><code>{{
+  "mcpServers": {{
+    "home-assistant": {{
+      "command": "npx",
+      "args": ["-y", "@coolver/mcp-home-assistant@latest"],
+      "env": {{
+        "HA_AGENT_URL": "http://homeassistant.local:8099",
+        "HA_TOKEN": "YOUR_API_KEY_HERE"
+      }}
+    }}
+  }}
+}}</code></div>
+                    </div>
+                </div>
+                
+                <div class="step">
+                    <div class="step-number">3</div>
+                    <div class="step-content">
+                        <strong>Restart Cursor</strong> to load the new configuration
+                    </div>
+                </div>
+                
+                <div class="step">
+                    <div class="step-number">4</div>
+                    <div class="step-content">
+                        <strong>Test connection</strong> - Ask Cursor AI: "List my Home Assistant entities"
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card">
+                <h2>💡 Additional Information</h2>
+                
+                <div class="info-box">
+                    <strong>🔒 Security:</strong> This API key is used ONLY to authenticate with this agent. The agent uses its internal supervisor token for Home Assistant API operations.
+                </div>
+                
+                <div class="info-box warning">
+                    <strong>⚠️ Keep your key safe:</strong> Don't share it publicly or commit it to git repositories.
+                </div>
+                
+                <div class="info-box">
+                    <strong>📁 Key location:</strong> Stored in <code>/config/.ha_cursor_agent_key</code>
+                </div>
+                
+                <div class="info-box">
+                    <strong>🔄 Regenerate key:</strong> Delete the file above and restart the add-on to generate a new key.
+                </div>
+            </div>
+            
+            <div class="card">
+                <h2>📚 Resources</h2>
+                <ul style="margin-left: 20px;">
+                    <li><a href="/docs" target="_blank">API Documentation</a></li>
+                    <li><a href="https://github.com/Coolver/home-assistant-cursor-agent" target="_blank">GitHub Repository</a></li>
+                    <li><a href="https://www.npmjs.com/package/@coolver/mcp-home-assistant" target="_blank">MCP Package</a></li>
+                </ul>
+            </div>
+        </div>
+        
+        <div class="success-message" id="successMessage">
+            ✅ API Key copied to clipboard!
+        </div>
+        
+        <script>
+            const actualKey = "{API_KEY}";
+            const maskedKey = "{masked_key}";
+            let isKeyVisible = false;
+            
+            function toggleKey() {{
+                const display = document.getElementById('keyDisplay');
+                isKeyVisible = !isKeyVisible;
+                
+                if (isKeyVisible) {{
+                    display.textContent = actualKey;
+                    display.classList.remove('masked');
+                }} else {{
+                    display.innerHTML = maskedKey + ' <span style="color: #8b949e; font-size: 12px;">← Click to reveal</span>';
+                    display.classList.add('masked');
+                }}
+            }}
+            
+            function copyKey() {{
+                navigator.clipboard.writeText(actualKey).then(() => {{
+                    const message = document.getElementById('successMessage');
+                    message.style.display = 'block';
+                    setTimeout(() => {{
+                        message.style.display = 'none';
+                    }}, 3000);
+                }}).catch(err => {{
+                    alert('Failed to copy: ' + err);
+                }});
+            }}
+        </script>
+    </body>
+    </html>
+    """
+    
+    return html_content
+
 
 @app.get("/api/health")
 async def health():
@@ -137,6 +556,7 @@ async def health():
         "ai_instructions": "/api/ai/instructions"
     }
 
+
 @app.exception_handler(Exception)
 async def global_exception_handler(request, exc):
     """Global exception handler"""
@@ -146,8 +566,8 @@ async def global_exception_handler(request, exc):
         content={"detail": f"Internal server error: {str(exc)}"}
     )
 
+
 if __name__ == "__main__":
     import uvicorn
     port = int(os.getenv('PORT', 8099))
     uvicorn.run(app, host="0.0.0.0", port=port)
-

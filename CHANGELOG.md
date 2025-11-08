@@ -2,6 +2,48 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.0.9] - 2025-11-08
+
+### 🔒 Security & UX Improvements
+
+**Breaking Change:** API authentication changed from Home Assistant Long-Lived Token to dedicated API Key.
+
+### Added
+- **Dedicated API Key system** - separate from HA tokens
+  - Auto-generates secure API key (32 bytes, cryptographically secure)
+  - Optional: set custom API key in add-on configuration
+  - Stored in `/config/.ha_cursor_agent_key`
+- **Ingress Panel** - beautiful web UI in Home Assistant sidebar
+  - Shows current API key (masked by default, click to reveal)
+  - Copy to clipboard button
+  - Step-by-step setup instructions
+  - Direct links to documentation
+- **Optional notifications** - get notified when API key is generated
+  - Configurable in add-on settings
+
+### Changed
+- **Authentication simplified** - no need to create HA Long-Lived Token
+- **Ingress enabled** - panel appears in sidebar as "API Key"
+- **Panel icon** changed to `mdi:key-variant`
+- Agent now uses dedicated API key instead of user's HA token
+- Agent still uses SUPERVISOR_TOKEN internally for HA API operations
+
+### Security
+- ✅ No more transmitting HA Long-Lived Token over network
+- ✅ API key is independent from HA authentication
+- ✅ Can regenerate key without affecting HA access
+- ✅ Simpler security model
+
+### Migration
+If upgrading from v1.0.8 or earlier:
+1. Update add-on to v1.0.9
+2. Open Sidebar → API Key (new panel will appear)
+3. Copy your new API key
+4. Update `~/.cursor/mcp.json` with new key
+5. Restart Cursor
+
+Old HA tokens will no longer work (this is intentional for security).
+
 ## [1.0.8] - 2025-11-08
 
 ### Added
