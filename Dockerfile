@@ -1,7 +1,7 @@
 ARG BUILD_FROM
 FROM ${BUILD_FROM}
 
-# Version: 2.3.1 - Force rebuild for add-on management support
+# Version: 2.3.3 - Fix duplicate router prefix
 # Install system dependencies
 RUN apk add --no-cache \
     git \

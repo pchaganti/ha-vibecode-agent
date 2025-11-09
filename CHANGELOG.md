@@ -2,6 +2,24 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.3.3] - 2025-11-09
+
+### 🐛 Critical Bug Fix
+
+**Router Prefix Fix:**
+- ✅ Fixed duplicate `/api/addons` prefix in `addons.py`
+- ✅ Changed `router = APIRouter(prefix="/api/addons", ...)` to `router = APIRouter()`
+- ✅ All add-on management endpoints now work correctly
+
+**What was wrong:**
+- Prefix was defined both in `addons.py` AND `main.py`
+- URLs became `/api/addons/api/addons/installed` → 404
+- Other routers (files, hacs) correctly use no prefix in router definition
+
+**Impact:**
+- Fixes all add-on management endpoints returning 404
+- `/api/addons/installed` now correctly maps to `/api/addons/installed` ✅
+
 ## [2.3.2] - 2025-11-09
 
 ### 🔧 Build Fix

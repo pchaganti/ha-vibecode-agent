@@ -9,7 +9,7 @@ from app.auth import verify_token
 from app.services.supervisor_client import get_supervisor_client
 
 logger = logging.getLogger('ha_cursor_agent')
-router = APIRouter(prefix="/api/addons", tags=["addons"])
+router = APIRouter()
 
 # ==================== Request Models ====================
 
