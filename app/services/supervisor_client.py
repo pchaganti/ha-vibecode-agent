@@ -20,8 +20,7 @@ class SupervisorClient:
         if not self.token:
             logger.warning("⚠️ No SUPERVISOR_TOKEN found - Add-on management disabled")
         else:
-            token_preview = f"{self.token[:20]}..." if self.token else "EMPTY"
-            logger.info(f"SupervisorClient initialized - URL: {self.base_url}, Token: {token_preview}")
+            logger.info(f"SupervisorClient initialized - URL: {self.base_url}")
     
     def is_available(self) -> bool:
         """Check if Supervisor API is available (running as add-on)"""
@@ -38,9 +37,8 @@ class SupervisorClient:
         """
         url = f"{self.base_url}/{endpoint}"
         
-        token_preview = f"{self.token[:20]}..." if self.token else "EMPTY"
         logger.info(f"🔍 Supervisor API Request: {method} {url}")
-        logger.info(f"🔍 Headers: X-Supervisor-Token={token_preview}, Content-Type=application/json")
+        logger.debug(f"🔍 Headers: X-Supervisor-Token present, Content-Type=application/json")
         
         try:
             async with aiohttp.ClientSession() as session:

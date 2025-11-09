@@ -2,6 +2,39 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.3.7] - 2025-11-09
+
+### 🔐 Critical Fix: Supervisor API Access + Security
+
+**1. Added Supervisor Manager Role (Critical):**
+- ✅ Added `hassio_role: manager` to config.yaml
+- ✅ Grants add-on permissions to manage other add-ons via Supervisor API
+- ✅ Fixes 403 Forbidden errors for all add-on management operations
+
+**Root cause of 403 errors:**
+- Supervisor API requires `hassio_role: manager` for add-on management
+- Without this role, all Supervisor API calls return 403 Forbidden
+- `hassio_api: true` alone is not sufficient for add-on management
+
+**2. Security Fix: Removed Token Logging:**
+- ✅ Removed token preview from all logs
+- ✅ Changed from `Token: 7e2dec72...` to no token logging
+- ✅ Headers logging moved to DEBUG level
+
+**Why:**
+- Logging tokens (even preview) is a security risk
+- Tokens should never appear in logs accessible to users
+- Debug-level logging available if needed for troubleshooting
+
+**Changes:**
+- config.yaml: added `hassio_role: manager`
+- app/main.py: removed token from SupervisorClient startup log
+- app/services/supervisor_client.py: removed token from all logs
+
+**Impact:**
+- 🎉 Add-on management should now work correctly!
+- 🔐 No token information in logs (improved security)
+
 ## [2.3.6] - 2025-11-09
 
 ### 🔍 Debug Enhancement

@@ -1,7 +1,7 @@
 ARG BUILD_FROM
 FROM ${BUILD_FROM}
 
-# Version: 2.3.6 - Enhanced Supervisor API logging
+# Version: 2.3.7 - Add Supervisor manager role + security fix
 # Install system dependencies
 RUN apk add --no-cache \
     git \
