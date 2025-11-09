@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.0.14] - 2025-11-08
+
+### Changed
+- **Consistent naming:** "API Key" → "Agent Key" throughout UI
+  - Better alignment with `HA_AGENT_KEY` variable name
+  - Clearer distinction from Home Assistant tokens
+- **Simplified security info:** Removed technical details about SUPERVISOR_TOKEN
+  - Less confusing for end users
+  - Focused on what matters: "Agent Key authenticates you"
+
 ## [1.0.13] - 2025-11-08
 
 ### Improved

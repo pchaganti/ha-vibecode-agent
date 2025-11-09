@@ -344,6 +344,10 @@ def generate_ingress_html(api_key: str, agent_version: str) -> str:
                 <span class="version">v{agent_version}</span>
             </h1>
             
+            <p style="color: #8b949e; margin: 10px 0 20px 0;">
+                Connect Cursor AI to your Home Assistant
+            </p>
+            
             <div class="card">
                 <h2>📋 Step 1: Copy Configuration</h2>
                 <p style="color: #8b949e; margin-bottom: 16px;">
@@ -399,7 +403,7 @@ def generate_ingress_html(api_key: str, agent_version: str) -> str:
                 <h2>💡 Additional Info</h2>
                 
                 <div class="info-box">
-                    <strong>🔒 Security:</strong> Your API key is used only to authenticate with this agent. The agent uses its internal supervisor token for all Home Assistant API operations.
+                    <strong>🔒 Security:</strong> Your Agent Key is used to authenticate with this agent.
                 </div>
                 
                 <div class="info-box warning">
@@ -408,12 +412,12 @@ def generate_ingress_html(api_key: str, agent_version: str) -> str:
                 
                 <div class="advanced">
                     <button class="advanced-toggle" onclick="toggleAdvanced()">
-                        <span>🔧 Advanced: View/Regenerate API Key</span>
+                        <span>🔧 Advanced: View/Regenerate Agent Key</span>
                         <span class="chevron" id="chevron">▼</span>
                     </button>
                     
                     <div class="advanced-content" id="advancedContent">
-                        <h3 style="color: #c9d1d9; font-size: 16px; margin-bottom: 12px;">Your API Key:</h3>
+                        <h3 style="color: #c9d1d9; font-size: 16px; margin-bottom: 12px;">Your Agent Key:</h3>
                         <div class="key-display" id="keyDisplay">{masked_key}</div>
                         
                         <div style="display: flex; gap: 8px; flex-wrap: wrap;">
