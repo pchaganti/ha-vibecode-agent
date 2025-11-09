@@ -90,20 +90,48 @@ Stop manually writing YAML configurations! This add-on enables Cursor AI to anal
 2. **Info** tab → **Start on boot: ON** → **START**
 3. **Wait for startup** (~10 seconds)
 
-### 4. Get Agent Key
+### 4. Setup MCP in Cursor
+
+**Get configuration from Home Assistant:**
 1. Open your **Home Assistant** (usually http://homeassistant.local:8123)
 2. Go to **Settings** → **Add-ons** → **HA Cursor Agent**
 3. Click **"Open Web UI"** button
 4. You'll see a beautiful interface with ready-to-use configuration
 5. Click **"Copy Configuration to Clipboard"** button
-6. Done! Configuration copied ✅
+6. Configuration copied to clipboard! ✅
 
-**Alternative ways to get your key:**
-- View in add-on **Logs** (shown on first start)
-- Read file: `/config/.ha_cursor_agent_key`
+**Add to Cursor AI:**
+1. Open **Cursor** editor
+2. Go to **Settings** (Cmd/Ctrl + ,)
+3. Click **Tools & MCP** in the sidebar
+4. Click **New MCP Server**
+5. Click **Add a Custom MCP Server**
+6. **Paste** the configuration you copied
+7. Click **Save**
+8. **Restart Cursor** completely (Cmd/Ctrl + Q and reopen)
 
-### 5. Test API
-Open `http://homeassistant.local:8099/docs` and explore! 🎉
+Done! Cursor AI is now connected to your Home Assistant 🎉
+
+### 5. Test Connection
+
+**Test that everything works:**
+
+Open Cursor and send this message to AI:
+```
+Connect to my Home Assistant and show me:
+1. List of all my climate entities
+2. Current status of the HA Cursor Agent
+3. Last 5 changes from Git history
+
+This will verify the MCP connection is working.
+```
+
+If AI successfully returns information about your entities and shows Git history, everything is working! ✅
+
+**Troubleshooting:** If connection fails, check:
+- Add-on is running in Home Assistant
+- Cursor was fully restarted
+- Configuration was pasted correctly
 
 ---
 
@@ -125,24 +153,9 @@ This add-on enables **Cursor AI to autonomously manage your Home Assistant** thr
 
 ### How to Connect Cursor AI (MCP)
 
-**New recommended way using Model Context Protocol (MCP):**
+If you followed the **Quick Start** above, you're already connected! ✅
 
-#### 1. Get Your Configuration
-
-1. Open your **Home Assistant** (usually http://homeassistant.local:8123)
-2. Go to **Settings** → **Add-ons** → **HA Cursor Agent**
-3. Click **"Open Web UI"**
-4. Click **"Copy Configuration to Clipboard"**
-
-#### 2. Add to Cursor
-
-1. Open Cursor → **Settings**
-2. Go to **Tools & MCP**
-3. Click **New MCP Server**
-4. Click **Add a Custom MCP Server**
-5. Paste the configuration you copied
-
-Or manually edit `~/.cursor/mcp.json`:
+**For reference, here's what the configuration looks like:**
 
 ```json
 {
@@ -159,32 +172,25 @@ Or manually edit `~/.cursor/mcp.json`:
 }
 ```
 
-**Why `@latest`?**
-- ✅ Automatic updates when Cursor restarts
-- ✅ Always get new features and bug fixes
-- ✅ No manual version management
+**Note:** The Web UI provides this exact configuration ready to copy - no need to type it manually!
 
-#### 2. Restart Cursor
+### Start Using
 
-Restart Cursor AI to load the MCP configuration.
-
-**Note:** After restart, Cursor will download the latest version of MCP package automatically.
-
-#### 3. Start Using!
-
-Just talk to Cursor AI:
+Once connected, just describe what you want in natural language:
 
 ```
-Show me all my climate entities
+Show me all my climate entities and their current states
 ```
 
 ```
-List my automations
+Analyze my automations and suggest optimizations
 ```
 
 ```
-Create a new automation that turns on lights at sunset
+Create a smart lighting automation for movie mode
 ```
+
+Cursor AI will autonomously read your configuration, create components, and deploy everything automatically!
 
 **That's it!** Cursor AI will use the MCP protocol to communicate with your Home Assistant.
 
