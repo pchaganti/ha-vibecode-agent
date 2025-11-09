@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.2.1] - 2025-11-09
+
+### 🐛 Bug Fixes
+
+**Critical Fix: Circular Import**
+- ✅ Fixed `ImportError: cannot import name 'verify_token'` that prevented agent startup
+- ✅ Moved authentication logic to separate `app/auth.py` module
+- ✅ Resolved circular dependency between `app/main.py` and `app/api/hacs.py`
+
+**Impact:**
+- Agent now starts correctly without import errors
+- No functional changes - all features work as before
+
 ## [2.2.0] - 2025-11-09
 
 ### 🚀 MAJOR: Full HACS Support with WebSocket
