@@ -96,7 +96,12 @@ Stop manually writing YAML configurations! This add-on enables Cursor AI to anal
 1. Open your **Home Assistant** (usually http://homeassistant.local:8123)
 2. Go to **Settings** → **Add-ons** → **HA Cursor Agent**
 3. Click **"Open Web UI"** button
-4. You'll see a beautiful interface with ready-to-use configuration
+4. You'll see this interface:
+
+<p align="center">
+  <img src=".github/images/ingress-panel.jpg" alt="HA Cursor Agent Ingress Panel" width="700">
+</p>
+
 5. Click **"Copy Configuration to Clipboard"** button
 6. Configuration copied to clipboard! ✅
 
