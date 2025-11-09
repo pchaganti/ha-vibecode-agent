@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.0.17] - 2025-11-08
+
+### Fixed
+- **Documentation correction** - Ingress Panel access path
+  - Correct: Settings → Add-ons → HA Cursor Agent → "Open Web UI"
+  - Incorrect (removed): "Sidebar → 🔑 API Key" (this doesn't exist)
+- **All documentation updated** with correct path to Web UI
+
 ## [1.0.16] - 2025-11-08
 
 ### Changed

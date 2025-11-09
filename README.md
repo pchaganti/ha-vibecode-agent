@@ -6,7 +6,7 @@ Stop manually writing YAML configurations! This add-on enables Cursor AI to anal
 
 **Real example:** User says *"Install smart climate control"* → AI analyzes 7 TRVs, creates 10 automations + 9 helpers + 10 sensors + 5 scripts, deploys everything, and it just works!
 
-[![Version](https://img.shields.io/badge/version-1.0.16-blue.svg)](https://github.com/Coolver/home-assistant-cursor-agent)
+[![Version](https://img.shields.io/badge/version-1.0.17-blue.svg)](https://github.com/Coolver/home-assistant-cursor-agent)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![MCP Package](https://img.shields.io/npm/v/@coolver/mcp-home-assistant?label=MCP%20Package)](https://www.npmjs.com/package/@coolver/mcp-home-assistant)
 
@@ -90,12 +90,12 @@ Stop manually writing YAML configurations! This add-on enables Cursor AI to anal
 2. **Info** tab → **Start on boot: ON** → **START**
 3. **Wait for startup** (~10 seconds)
 
-### 4. Get API Key
-1. Look in **Home Assistant Sidebar** → new panel **"🔑 API Key"** appears
-2. **Click** on "API Key" panel
-3. You'll see a beautiful interface with your API key
-4. **Click "Copy to Clipboard"** button
-5. Save it securely (you'll need it for Cursor)
+### 4. Get Agent Key
+1. Go to **Settings** → **Add-ons** → **HA Cursor Agent**
+2. Click **"Open Web UI"** button
+3. You'll see a beautiful interface with ready-to-use configuration
+4. Click **"Copy Configuration to Clipboard"** button
+5. Done! Configuration copied ✅
 
 **Alternative ways to get your key:**
 - View in add-on **Logs** (shown on first start)
@@ -128,7 +128,9 @@ This add-on enables **Cursor AI to autonomously manage your Home Assistant** thr
 
 #### 1. Get Your Configuration
 
-Open Home Assistant Sidebar → **🔑 API Key** → Click **"Copy Configuration to Clipboard"**
+1. Go to **Settings** → **Add-ons** → **HA Cursor Agent**
+2. Click **"Open Web UI"**
+3. Click **"Copy Configuration to Clipboard"**
 
 #### 2. Add to Cursor
 
