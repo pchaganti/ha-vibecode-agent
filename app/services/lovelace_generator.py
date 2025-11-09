@@ -345,3 +345,5 @@ class LovelaceGenerator:
 lovelace_generator = LovelaceGenerator()
 
 
+
+

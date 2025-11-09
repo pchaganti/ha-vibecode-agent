@@ -249,7 +249,7 @@ async def apply_dashboard(request: ApplyDashboardRequest):
         # Create backup if requested
         if request.create_backup:
             logger.info("Creating backup before applying dashboard")
-            commit_msg = git_manager.commit("Before applying generated dashboard")
+            commit_msg = await git_manager.commit_changes("Before applying generated dashboard")
             logger.info(f"Backup created: {commit_msg}")
         
         # Convert config to YAML
@@ -285,7 +285,7 @@ async def apply_dashboard(request: ApplyDashboardRequest):
             commit_msg = f"Applied generated dashboard: {lovelace_path}"
             if dashboard_registered:
                 commit_msg += " (auto-registered)"
-            git_manager.commit(commit_msg)
+            await git_manager.commit_changes(commit_msg)
         
         note = 'Dashboard created successfully!'
         if dashboard_registered:
