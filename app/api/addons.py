@@ -23,6 +23,45 @@ class RepositoryRequest(BaseModel):
 
 # ==================== Endpoints ====================
 
+@router.get("/store", response_model=Response, dependencies=[Depends(verify_token)])
+async def list_store_addons():
+    """
+    List ALL add-ons from add-on store (full catalog)
+    
+    Returns complete catalog of add-ons from all connected repositories.
+    Use this for browsing available add-ons and making recommendations.
+    """
+    try:
+        supervisor = await get_supervisor_client()
+        result = await supervisor.list_store_addons()
+        
+        # Parse response (may be list or dict)
+        if isinstance(result, list):
+            addons = result
+        elif isinstance(result, dict):
+            if 'addons' in result:
+                addons = result['addons']
+            elif 'data' in result and isinstance(result['data'], list):
+                addons = result['data']
+            elif 'data' in result and isinstance(result['data'], dict):
+                addons = result['data'].get('addons', [])
+            else:
+                addons = []
+        else:
+            addons = []
+        
+        return Response(
+            success=True,
+            message=f"Found {len(addons)} add-ons in store catalog",
+            data={
+                'count': len(addons),
+                'addons': addons
+            }
+        )
+    except Exception as e:
+        logger.error(f"Error listing store add-ons: {e}")
+        return Response(success=False, message=f"Failed to list store add-ons: {str(e)}")
+
 @router.get("/available", response_model=Response, dependencies=[Depends(verify_token)])
 async def list_available_addons():
     """

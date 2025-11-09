@@ -2,7 +2,7 @@ ARG BUILD_FROM
 FROM ${BUILD_FROM}
 
 # Version: 2.3.12 - Force rebuild for repository parsing fix
-# Build timestamp: 2025-11-09 15:03:00 UTC
+# Build timestamp: 2025-11-09 15:10:00 UTC
 # Install system dependencies
 RUN apk add --no-cache \
     git \

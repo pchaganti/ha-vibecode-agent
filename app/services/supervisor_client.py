@@ -70,6 +70,9 @@ class SupervisorClient:
     async def list_addons(self) -> Dict:
         """Get list of all available add-ons (installed and available)
         
+        NOTE: This endpoint returns limited list (installed + some available).
+        For full catalog from all repositories, use list_store_addons().
+        
         Returns:
             {
                 "result": "ok",
@@ -92,6 +95,17 @@ class SupervisorClient:
             }
         """
         return await self._request('GET', 'addons')
+    
+    async def list_store_addons(self) -> Dict:
+        """Get full catalog of all add-ons from add-on store
+        
+        Returns complete list of add-ons from all connected repositories,
+        not just installed ones. Use this for browsing and recommendations.
+        
+        Returns:
+            List of all add-ons available in connected repositories
+        """
+        return await self._request('GET', 'store')
     
     async def get_addon_info(self, slug: str) -> Dict:
         """Get detailed information about a specific add-on
