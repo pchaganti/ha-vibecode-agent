@@ -12,7 +12,7 @@ AI_INSTRUCTIONS = """
 HA CURSOR AGENT - INSTRUCTIONS FOR AI ASSISTANTS
 ================================================================================
 
-Version: 2.2.2
+Version: 2.2.3
 Base URL: http://homeassistant.local:8099
 Interactive Docs: http://homeassistant.local:8099/docs
 
@@ -294,7 +294,30 @@ Response tells you if HACS is installed and configured.
 POST /api/hacs/install
 ```
 Downloads and installs HACS from GitHub.
-**Important:** User must restart Home Assistant and configure GitHub token in UI.
+
+**After installation, provide user with these setup steps:**
+
+1. **Wait for Home Assistant to restart** (~30-60 seconds)
+
+2. **Add HACS integration manually:**
+   - Open Home Assistant UI
+   - Go to: **Settings** → **Devices & Services**
+   - Click: **+ ADD INTEGRATION** (bottom right)
+   - Search for: **HACS**
+   - Click on HACS to start setup
+
+3. **Complete HACS configuration:**
+   - Accept Terms of Service
+   - Create GitHub Personal Access Token:
+     - Visit: https://github.com/settings/tokens/new
+     - Name: `HACS Token`
+     - Expiration: `No expiration`
+     - **No scopes/permissions needed** (leave all checkboxes empty)
+     - Click **Generate token** and copy it
+   - Paste token into HACS setup
+   - Complete configuration
+
+4. **After setup:** HACS is ready! User can now install 1000+ integrations.
 
 ### Step 3: Search for Integrations
 ```

@@ -2,6 +2,27 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.2.3] - 2025-11-09
+
+### 📝 Documentation Improvements
+
+**HACS Setup Instructions**
+- ✅ Fixed HACS post-installation instructions in AI Instructions
+- ✅ Removed incorrect mention of automatic notification after HACS installation
+- ✅ Added clear step-by-step guide: wait for restart → manually add HACS integration → configure GitHub token
+- ✅ Clarified that user needs to go to Settings → Devices & Services → + ADD INTEGRATION → search for HACS
+
+**README Enhancement**
+- ✅ Added "📦 Extend with Community" section to main description
+- ✅ Highlights HACS installation, search, and integration management
+- ✅ Better visibility of community integrations feature
+
+**Impact:**
+- Accurate user guidance after HACS installation
+- No confusion about non-existent notifications
+- Clear manual integration setup process
+- Better feature discoverability
+
 ## [2.2.2] - 2025-11-09
 
 ### 🧠 AI Instructions Enhancement
