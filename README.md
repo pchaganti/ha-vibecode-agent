@@ -164,26 +164,6 @@ Or manually edit `~/.cursor/mcp.json`:
 - ✅ Always get new features and bug fixes
 - ✅ No manual version management
 
-**Alternative options:**
-
-**Fixed version** (more stable):
-```json
-"args": ["-y", "@coolver/mcp-home-assistant@1.0.5"]
-```
-
-**Global install** (if you prefer):
-```bash
-npm install -g @coolver/mcp-home-assistant
-```
-Then use:
-```json
-"command": "mcp-home-assistant"
-```
-
-**Replace:**
-- `YOUR_LONG_LIVED_ACCESS_TOKEN` - token from Step 4 above
-- `homeassistant.local` - with your HA IP if needed (e.g., `http://192.168.1.100:8099`)
-
 #### 2. Restart Cursor
 
 Restart Cursor AI to load the MCP configuration.
@@ -679,7 +659,7 @@ pip install -r requirements.txt
 
 # Set environment variables
 export CONFIG_PATH="/path/to/ha/config"
-export HA_TOKEN="your_token"
+export HA_AGENT_KEY="your_dev_key"
 export HA_URL="http://homeassistant.local:8123"
 export PORT=8099
 export LOG_LEVEL=DEBUG
