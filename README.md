@@ -461,24 +461,31 @@ DELETE /api/logs/clear
 
 All API endpoints (except `/api/health`) require authentication.
 
-### Using Supervisor Token (within HA)
+### For MCP Clients (Cursor AI)
 
-The add-on automatically uses the Supervisor token. No configuration needed.
+The add-on uses **Agent Key** authentication:
 
-### Using Long-Lived Token (external access)
+1. Get your Agent Key from **Web UI** (Settings → Add-ons → HA Cursor Agent → Open Web UI)
+2. Configure in Cursor MCP settings with `HA_AGENT_KEY`
+3. Agent Key is auto-generated on first start
 
-1. Create token in HA: **Profile Name** (bottom left) → **Security** → **Long-lived access tokens** → **CREATE TOKEN**
-2. Add header to requests:
-   ```
-   Authorization: Bearer YOUR_TOKEN_HERE
-   ```
+### For Direct API Access
 
-### Example with curl:
+Add header to requests:
+```
+Authorization: Bearer YOUR_AGENT_KEY
+```
+
+**Example with curl:**
 
 ```bash
-curl -H "Authorization: Bearer YOUR_TOKEN" \
+curl -H "Authorization: Bearer YOUR_AGENT_KEY" \
      http://homeassistant.local:8099/api/entities/list
 ```
+
+### Internal Operations
+
+The add-on automatically uses the **Supervisor Token** for Home Assistant API operations. No configuration needed.
 
 ---
 
@@ -489,7 +496,7 @@ curl -H "Authorization: Bearer YOUR_TOKEN" \
 ```python
 import requests
 
-headers = {"Authorization": "Bearer YOUR_TOKEN"}
+headers = {"Authorization": "Bearer YOUR_AGENT_KEY"}
 url = "http://homeassistant.local:8099"
 
 # Read configuration.yaml
@@ -582,17 +589,25 @@ requests.post(
 curl http://homeassistant.local:8099/api/health
 ```
 
+**Example response:**
+```json
+{
+  "status": "healthy",
+  "version": "2.0.1"
+}
+```
+
 ### View Agent Logs
 
 ```bash
-curl -H "Authorization: Bearer TOKEN" \
+curl -H "Authorization: Bearer YOUR_AGENT_KEY" \
      http://homeassistant.local:8099/api/logs/?limit=50
 ```
 
 ### View Backup History
 
 ```bash
-curl -H "Authorization: Bearer TOKEN" \
+curl -H "Authorization: Bearer YOUR_AGENT_KEY" \
      http://homeassistant.local:8099/api/backup/history
 ```
 
@@ -764,9 +779,10 @@ Common issues:
 
 ### API returns 401 Unauthorized
 
-- Check token is correct
+- Check Agent Key is correct
+- Regenerate key if needed: Settings → Add-ons → HA Cursor Agent → Open Web UI
 - Ensure Authorization header is present
-- Token format: `Bearer YOUR_TOKEN`
+- Format: `Authorization: Bearer YOUR_AGENT_KEY`
 
 ### File operations fail
 
