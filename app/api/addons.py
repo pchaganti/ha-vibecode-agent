@@ -410,7 +410,13 @@ async def list_repositories():
         supervisor = await get_supervisor_client()
         result = await supervisor.list_repositories()
         
-        repos = result.get('data', {}).get('repositories', [])
+        # Supervisor API may return dict with 'data' or list directly
+        if isinstance(result, list):
+            repos = result
+        elif isinstance(result, dict):
+            repos = result.get('data', {}).get('repositories', result.get('repositories', []))
+        else:
+            repos = []
         
         return Response(
             success=True,

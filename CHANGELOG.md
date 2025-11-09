@@ -2,6 +2,33 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.3.11] - 2025-11-09
+
+### 🐛 Bug Fix
+
+**Fixed Repository List Parsing:**
+- ✅ Fixed parsing error: `'list' object has no attribute 'get'`
+- ✅ Added flexible parsing for Supervisor API response
+- ✅ Handles both list and dict response formats
+
+**What was wrong:**
+- Code assumed: `result.get('data', {}).get('repositories', [])`
+- Supervisor API may return list directly or in different structure
+- Caused error when listing repositories
+
+**Fix:**
+- Check if result is list → use directly
+- Check if result is dict → handle multiple formats
+- Fallback to empty list if unexpected format
+
+**Impact:**
+- `/api/addons/repositories` now works correctly
+- AI can check connected repositories
+- AI can suggest adding community repositories
+
+**Changes:**
+- app/api/addons.py: flexible parsing in list_repositories()
+
 ## [2.3.10] - 2025-11-09
 
 ### 🐛 Bug Fix

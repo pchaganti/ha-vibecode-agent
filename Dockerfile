@@ -1,7 +1,7 @@
 ARG BUILD_FROM
 FROM ${BUILD_FROM}
 
-# Version: 2.3.10 - Fix installed add-ons detection logic
+# Version: 2.3.11 - Fix repository list parsing
 # Install system dependencies
 RUN apk add --no-cache \
     git \
