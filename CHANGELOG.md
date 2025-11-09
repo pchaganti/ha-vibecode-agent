@@ -2,6 +2,121 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.5.0] - 2025-11-09
+
+### 🎯 MAJOR REFACTOR: AI-Driven Dashboard Generation
+
+**Architectural change from server-side templates to intelligent AI-driven creation!**
+
+**What Changed:**
+- ❌ REMOVED: Server-side LovelaceGenerator (rigid templates)
+- ❌ REMOVED: POST /api/lovelace/generate endpoint  
+- ✅ UPDATED: GET /api/lovelace/analyze (returns full entity data for AI)
+- ✅ ADDED: Conversational workflow in AI Instructions (+200 lines)
+- ✅ ADDED: Dashboard generation guidelines for AI
+- ✅ ADDED: YAMLEditor utility for safe YAML operations
+- ✅ ADDED: Auto-rollback function for error recovery
+
+**New Architecture:**
+1. User asks for dashboard with requirements
+2. AI asks clarifying questions (conversational!)
+3. AI analyzes entities via ha_analyze_entities_for_dashboard
+4. AI generates custom YAML in Cursor (intelligent!)
+5. AI proposes structure to user
+6. User approves
+7. AI applies via ha_apply_dashboard
+
+**Benefits:**
+- ✅ AI understands context ("climate-focused", "minimal", "for bedroom")
+- ✅ Conversational dashboard creation
+- ✅ Custom layouts per user needs, not rigid templates
+- ✅ AI proposes before creating
+- ✅ Flexible and intelligent
+
+**Example Dialog:**
+```
+User: "Create climate dashboard"
+AI: "I see 7 TRVs. Focus on these? Monitor batteries too?"
+User: "Yes"
+AI: *generates custom YAML* *proposes* *applies*
+✅ Personalized dashboard!
+```
+
+**Changes:**
+- DELETED: app/services/lovelace_generator.py (-430 lines)
+- app/api/lovelace.py: removed generate, simplified analyze
+- app/api/ai_instructions.py: added dashboard workflow (+200 lines)
+- app/utils/yaml_editor.py: NEW - safe YAML editing utility
+
+## [2.4.7] - 2025-11-09
+
+### 🛠️ Improvements: YAMLEditor Utility + Error Handling
+
+**Lessons learned - proper tooling:**
+- ✅ Added YAMLEditor utility for safe YAML operations
+- ✅ Added auto-rollback function for error recovery
+- ✅ Improved empty section cleanup
+
+**New utilities:**
+- YAMLEditor.remove_lines_from_end()
+- YAMLEditor.remove_empty_yaml_section()
+- YAMLEditor.remove_yaml_entry()
+- _rollback_on_error() for automatic Git rollback
+
+## [2.4.6] - 2025-11-09
+
+### 🐛 Bug Fix: Empty Section Cleanup
+
+**Fixed invalid YAML after dashboard deletion:**
+- Deleting last dashboard left empty lovelace: section
+- HA validation failed: "expected dictionary, got None"
+- Now removes empty sections automatically
+
+## [2.4.5] - 2025-11-09
+
+### 🗑️ Feature: Dashboard Deletion + Restart Fix
+
+**Added dashboard deletion endpoint:**
+- DELETE /api/lovelace/delete/{filename}
+- Removes file + configuration entry
+- Full HA restart after deletion
+
+**Fixed restart warning:**
+- Changed reload_config() → restart() (full restart needed)
+
+## [2.4.4] - 2025-11-09
+
+### 🐛 Bug Fix: Handle !include Directives
+
+**Fixed configuration.yaml parsing:**
+- yaml.safe_load() failed on !include directives
+- Now processes as text to preserve HA directives
+- Uses regex for insertion
+
+## [2.4.3] - 2025-11-09
+
+### 🐛 Bug Fix: Async File Operations
+
+**Fixed async/await in lovelace.py:**
+- Added await for file_manager.read_file()
+- Added await for file_manager.write_file()
+- Fixed GitManager.commit_changes() calls
+
+## [2.4.2] - 2025-11-09
+
+### 🎯 Feature: Auto-Registration
+
+**Dashboards automatically register in configuration.yaml:**
+- No manual UI steps needed
+- Auto-restart after registration
+- Dashboard appears in sidebar instantly
+
+## [2.4.1] - 2025-11-09
+
+### 🐛 Bug Fix: Async File Operations
+
+**Fixed async/await in dashboard preview and apply.**
+
 ## [2.4.0] - 2025-11-09
 
 ### 🎨 MAJOR: Lovelace Dashboard Generator (Phase 2.1)

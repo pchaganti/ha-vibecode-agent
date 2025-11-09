@@ -7,7 +7,6 @@ import yaml
 
 from app.models.schemas import Response
 from app.auth import verify_token
-from app.services.lovelace_generator import lovelace_generator
 from app.services.ha_client import ha_client
 from app.services.file_manager import file_manager
 from app.services.git_manager import git_manager
@@ -156,12 +155,6 @@ async def _register_dashboard(filename: str, title: str, icon: str) -> bool:
 
 # ==================== Request Models ====================
 
-class GenerateDashboardRequest(BaseModel):
-    """Request model for generating dashboard"""
-    style: str = 'modern'  # modern, classic, minimal
-    title: str = 'Home'
-    include_views: Optional[List[str]] = None  # ['lights', 'climate', 'media']
-
 class ApplyDashboardRequest(BaseModel):
     """Request model for applying dashboard"""
     dashboard_config: Dict[str, Any]
@@ -174,15 +167,18 @@ class ApplyDashboardRequest(BaseModel):
 @router.get("/analyze", response_model=Response, dependencies=[Depends(verify_token)])
 async def analyze_entities():
     """
-    Analyze entities and provide dashboard generation recommendations
+    Analyze entities and provide data for AI-driven dashboard generation
+    
+    Returns raw entity data for AI to analyze and generate dashboard in Cursor.
+    AI will ask user questions and create custom dashboard based on requirements.
     
     Returns:
-        - Entity counts by domain and area
-        - Recommended views
-        - Grouping suggestions
+        - Complete entity list with attributes
+        - Entity counts by domain
+        - Areas (if configured)
     """
     try:
-        logger.info("Analyzing entities for dashboard generation")
+        logger.info("Fetching entities for AI dashboard generation")
         
         # Get all entities from Home Assistant
         entities = await ha_client.get_states()
@@ -194,78 +190,34 @@ async def analyze_entities():
                 data={}
             )
         
-        # Analyze entities
-        analysis = lovelace_generator.analyze_entities(entities)
+        # Simple grouping by domain (no generation logic)
+        from collections import defaultdict
+        by_domain = defaultdict(list)
+        
+        for entity in entities:
+            entity_id = entity.get('entity_id', '')
+            domain = entity_id.split('.')[0] if '.' in entity_id else 'unknown'
+            by_domain[domain].append({
+                'entity_id': entity_id,
+                'state': entity.get('state'),
+                'attributes': entity.get('attributes', {}),
+                'friendly_name': entity.get('attributes', {}).get('friendly_name', entity_id)
+            })
         
         return Response(
             success=True,
-            message=f"Analyzed {analysis['total_entities']} entities",
-            data=analysis
-        )
-    
-    except Exception as e:
-        logger.error(f"Error analyzing entities: {e}")
-        return Response(success=False, message=f"Failed to analyze entities: {str(e)}")
-
-
-@router.post("/generate", response_model=Response, dependencies=[Depends(verify_token)])
-async def generate_dashboard(request: GenerateDashboardRequest):
-    """
-    Generate complete Lovelace dashboard configuration
-    
-    Args:
-        request: Dashboard generation parameters
-        
-    Returns:
-        Generated dashboard configuration ready to apply
-    """
-    try:
-        logger.info(f"Generating {request.style} dashboard: {request.title}")
-        
-        # Get all entities
-        entities = await ha_client.get_states()
-        
-        if not entities or len(entities) == 0:
-            return Response(
-                success=False,
-                message="No entities found to generate dashboard",
-                data={}
-            )
-        
-        # Generate dashboard
-        dashboard_config = lovelace_generator.generate_dashboard(
-            entities=entities,
-            style=request.style
-        )
-        
-        # Update title if provided
-        if request.title:
-            dashboard_config['title'] = request.title
-        
-        # Filter views if specified
-        if request.include_views:
-            dashboard_config['views'] = [
-                view for view in dashboard_config['views']
-                if view.get('path') in request.include_views or view.get('title') in request.include_views
-            ]
-        
-        # Convert to YAML for preview
-        dashboard_yaml = yaml.dump(dashboard_config, default_flow_style=False, allow_unicode=True)
-        
-        return Response(
-            success=True,
-            message=f"Dashboard generated with {len(dashboard_config['views'])} views",
+            message=f"Found {len(entities)} entities for AI analysis",
             data={
-                'config': dashboard_config,
-                'yaml': dashboard_yaml,
-                'views': [v['title'] for v in dashboard_config['views']],
-                'total_views': len(dashboard_config['views'])
+                'total_entities': len(entities),
+                'entities': entities,
+                'by_domain': dict(by_domain),
+                'domain_counts': {domain: len(ents) for domain, ents in by_domain.items()}
             }
         )
     
     except Exception as e:
-        logger.error(f"Error generating dashboard: {e}")
-        return Response(success=False, message=f"Failed to generate dashboard: {str(e)}")
+        logger.error(f"Error fetching entities: {e}")
+        return Response(success=False, message=f"Failed to fetch entities: {str(e)}")
 
 
 @router.get("/preview", response_model=Response, dependencies=[Depends(verify_token)])
