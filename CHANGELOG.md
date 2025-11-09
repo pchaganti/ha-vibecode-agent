@@ -2,6 +2,29 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.3.8] - 2025-11-09
+
+### 🐛 Critical Bug Fix
+
+**Fixed Supervisor API URL Path Duplication:**
+- ✅ Removed `/supervisor/` prefix from all endpoint paths
+- ✅ Fixed URL from `http://supervisor/supervisor/addons` to `http://supervisor/addons`
+- ✅ All add-on management endpoints now use correct URL format
+
+**Root cause:**
+- v2.3.4 added `/supervisor/` prefix to endpoints
+- But `base_url` is already `http://supervisor`
+- Result: `http://supervisor` + `/supervisor/addons` = double `/supervisor/` → 404
+
+**Fixed all endpoints:**
+- `addons` (not `supervisor/addons`)
+- `addons/{slug}/info`, `/logs`, `/install`, `/uninstall`, etc.
+- `store/repositories` (not `supervisor/store/repositories`)
+
+**Impact:**
+- 🎉 Add-on management should now work with correct URLs!
+- Manager role from v2.3.7 + correct URLs = working add-on management
+
 ## [2.3.7] - 2025-11-09
 
 ### 🔐 Critical Fix: Supervisor API Access + Security
