@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.3.1] - 2025-11-09
+
+### 🐛 Bug Fix
+
+**Critical Import Fix:**
+- ✅ Fixed ImportError in `app/api/addons.py`
+- ✅ Changed `from app.models import Response` to `from app.models.schemas import Response`
+- ✅ Agent now starts correctly
+
+**Impact:**
+- Fixes agent startup failure in v2.3.0
+- All add-on management features now work correctly
+
 ## [2.3.0] - 2025-11-09
 
 ### 🚀 MAJOR: Complete Add-on Management (Phase 1.2) 🔥
