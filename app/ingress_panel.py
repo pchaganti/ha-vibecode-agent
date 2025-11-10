@@ -135,6 +135,37 @@ def generate_ingress_html(api_key: str, agent_version: str) -> str:
                 animation: pulse 0.3s ease;
             }}
             
+            .btn-regenerate {{
+                background: #da3633;
+                color: white;
+                border: none;
+                padding: 12px 24px;
+                border-radius: 6px;
+                cursor: pointer;
+                font-size: 16px;
+                font-weight: 600;
+                display: inline-flex;
+                align-items: center;
+                gap: 8px;
+                transition: all 0.2s;
+                white-space: nowrap;
+            }}
+            
+            .btn-regenerate:hover {{
+                background: #e5534b;
+                transform: translateY(-1px);
+                box-shadow: 0 4px 12px rgba(218, 54, 51, 0.4);
+            }}
+            
+            .btn-regenerate:active {{
+                transform: translateY(0);
+            }}
+            
+            .btn-regenerate.regenerating {{
+                background: #8b949e;
+                cursor: wait;
+            }}
+            
             @keyframes pulse {{
                 0%, 100% {{
                     transform: scale(1);
@@ -358,9 +389,14 @@ def generate_ingress_html(api_key: str, agent_version: str) -> str:
                     <pre id="configText">{json_config}</pre>
                 </div>
                 
-                <button class="copy-btn" id="copyBtn" onclick="copyConfig()">
-                    <span id="copyBtnIcon">📋</span> <span id="copyBtnText">Copy Configuration to Clipboard</span>
-                </button>
+                <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+                    <button class="copy-btn" id="copyBtn" onclick="copyConfig()" style="flex: 1;">
+                        <span id="copyBtnIcon">📋</span> <span id="copyBtnText">Copy Configuration</span>
+                    </button>
+                    <button class="btn-regenerate" id="regenerateBtn" onclick="confirmRegenerate()">
+                        <span id="regenIcon">🔄</span> <span id="regenText">Regenerate Key</span>
+                    </button>
+                </div>
             </div>
             
             <div class="card">
@@ -424,9 +460,6 @@ def generate_ingress_html(api_key: str, agent_version: str) -> str:
                             <button class="btn-secondary" onclick="toggleKeyVisibility()">
                                 <span id="eyeIcon">👁️</span> <span id="toggleText">Show Full Key</span>
                             </button>
-                            <button class="btn-danger" onclick="confirmRegenerate()">
-                                🔄 Regenerate Key
-                            </button>
                         </div>
                         
                         <div class="info-box warning" style="margin-top: 16px; font-size: 13px;">
@@ -456,9 +489,9 @@ def generate_ingress_html(api_key: str, agent_version: str) -> str:
         </div>
         
         <script>
-            const fullConfig = `{json_config}`;
-            const fullKey = "{api_key}";
-            const maskedKey = "{masked_key}";
+            let fullConfig = `{json_config}`;
+            let fullKey = "{api_key}";
+            let maskedKey = "{masked_key}";
             let keyVisible = false;
             
             function copyConfig() {{
@@ -584,9 +617,83 @@ def generate_ingress_html(api_key: str, agent_version: str) -> str:
                 }}
             }}
             
-            function regenerateKey() {{
-                // TODO: Implement key regeneration endpoint
-                alert('Key regeneration is not yet implemented.\\n\\nTo regenerate manually:\\n1. Delete /config/.ha_cursor_agent_key\\n2. Restart add-on\\n3. Come back here to get new key');
+            async function regenerateKey() {{
+                const btn = document.getElementById('regenerateBtn');
+                const icon = document.getElementById('regenIcon');
+                const text = document.getElementById('regenText');
+                
+                // Show loading state
+                btn.classList.add('regenerating');
+                btn.disabled = true;
+                icon.textContent = '⏳';
+                text.textContent = 'Regenerating...';
+                
+                try {{
+                    const response = await fetch('/api/regenerate-key', {{
+                        method: 'POST',
+                        headers: {{'Content-Type': 'application/json'}}
+                    }});
+                    
+                    const result = await response.json();
+                    
+                    if (result.success) {{
+                        // Update fullKey and fullConfig with new key
+                        fullKey = result.new_key;
+                        
+                        // Update config text with new key
+                        const newConfig = fullConfig.replace(
+                            /"HA_AGENT_KEY": ".*?"/,
+                            `"HA_AGENT_KEY": "${{result.new_key}}"`
+                        );
+                        fullConfig = newConfig;
+                        document.getElementById('configText').textContent = newConfig;
+                        
+                        // Update masked key display
+                        const newMasked = result.new_key.substring(0, 12) + '...' + result.new_key.substring(result.new_key.length - 12);
+                        document.getElementById('keyDisplay').textContent = keyVisible ? result.new_key : newMasked;
+                        maskedKey = newMasked;
+                        
+                        // Show success
+                        icon.textContent = '✅';
+                        text.textContent = 'Key Regenerated!';
+                        btn.style.background = '#238636';
+                        
+                        // Show popup
+                        showSuccess();
+                        
+                        // Alert user to update Cursor
+                        setTimeout(() => {{
+                            alert('✅ New API Key generated!\\n\\n⚠️ IMPORTANT:\\n1. Copy the new configuration (button above)\\n2. Update ~/.cursor/mcp.json with new key\\n3. Restart Cursor\\n\\nOld key is now invalid!');
+                        }}, 500);
+                        
+                        // Reset button after 3 seconds
+                        setTimeout(() => {{
+                            btn.classList.remove('regenerating');
+                            btn.disabled = false;
+                            btn.style.background = '';
+                            icon.textContent = '🔄';
+                            text.textContent = 'Regenerate Key';
+                        }}, 3000);
+                        
+                    }} else {{
+                        throw new Error(result.message);
+                    }}
+                    
+                }} catch (error) {{
+                    console.error('Regeneration failed:', error);
+                    icon.textContent = '❌';
+                    text.textContent = 'Failed!';
+                    
+                    alert('❌ Failed to regenerate key:\\n' + error.message + '\\n\\nTry again or check agent logs.');
+                    
+                    // Reset button
+                    setTimeout(() => {{
+                        btn.classList.remove('regenerating');
+                        btn.disabled = false;
+                        icon.textContent = '🔄';
+                        text.textContent = 'Regenerate Key';
+                    }}, 3000);
+                }}
             }}
         </script>
     </body>

@@ -23,7 +23,7 @@ LOG_LEVEL = os.getenv('LOG_LEVEL', 'info').upper()
 logger = setup_logger('ha_cursor_agent', LOG_LEVEL)
 
 # Agent version
-AGENT_VERSION = "2.5.2"
+AGENT_VERSION = "2.5.3"
 
 # FastAPI app
 app = FastAPI(
@@ -231,6 +231,44 @@ app.include_router(ai_instructions.router, prefix="/api/ai")
 async def ingress_panel():
     """Ingress panel - shows ready-to-use JSON config"""
     return generate_ingress_html(API_KEY, AGENT_VERSION)
+
+
+@app.post("/api/regenerate-key")
+async def regenerate_api_key():
+    """Regenerate API key (no auth required - accessible via ingress)"""
+    global API_KEY
+    
+    try:
+        import secrets
+        from pathlib import Path
+        
+        # Generate new key
+        new_key = secrets.token_urlsafe(32)
+        
+        # Save to file
+        key_file = Path('/config/.ha_cursor_agent_key')
+        key_file.write_text(new_key)
+        
+        # Update global variable
+        API_KEY = new_key
+        
+        # Also update in set_api_key function
+        set_api_key(new_key)
+        
+        logger.warning(f"🔄 API Key regenerated via ingress panel")
+        
+        return JSONResponse({
+            "success": True,
+            "message": "API Key regenerated successfully",
+            "new_key": new_key
+        })
+        
+    except Exception as e:
+        logger.error(f"Failed to regenerate key: {e}")
+        return JSONResponse({
+            "success": False,
+            "message": f"Failed to regenerate key: {str(e)}"
+        }, status_code=500)
 
 
 @app.get("/old", response_class=HTMLResponse)
