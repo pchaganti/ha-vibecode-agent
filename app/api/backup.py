@@ -66,10 +66,37 @@ async def get_history(limit: int = 20):
         logger.error(f"Failed to get history: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.post("/rollback", response_model=Response)
-async def rollback_to_commit(rollback: RollbackRequest):
+@router.post("/rollback/{commit_hash}", response_model=Response)
+async def rollback_to_commit_path(commit_hash: str):
     """
-    Rollback configuration to specific commit
+    Rollback configuration to specific commit (path parameter version)
+    
+    **⚠️ WARNING: This will overwrite current configuration!**
+    
+    **Example:**
+    - POST `/api/backup/rollback/a1b2c3d4`
+    """
+    try:
+        if not git_manager.enabled:
+            raise HTTPException(status_code=400, detail="Git versioning is not enabled")
+        
+        result = await git_manager.rollback(commit_hash)
+        
+        logger.warning(f"Rolled back to: {commit_hash}")
+        
+        return Response(
+            success=True,
+            message=f"Rolled back to commit: {commit_hash}",
+            data=result
+        )
+    except Exception as e:
+        logger.error(f"Failed to rollback: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/rollback", response_model=Response)
+async def rollback_to_commit_body(rollback: RollbackRequest):
+    """
+    Rollback configuration to specific commit (body parameter version)
     
     **⚠️ WARNING: This will overwrite current configuration!**
     
@@ -80,22 +107,8 @@ async def rollback_to_commit(rollback: RollbackRequest):
     }
     ```
     """
-    try:
-        if not git_manager.enabled:
-            raise HTTPException(status_code=400, detail="Git versioning is not enabled")
-        
-        result = await git_manager.rollback(rollback.commit_hash)
-        
-        logger.warning(f"Rolled back to: {rollback.commit_hash}")
-        
-        return Response(
-            success=True,
-            message=f"Rolled back to commit: {rollback.commit_hash}",
-            data=result
-        )
-    except Exception as e:
-        logger.error(f"Failed to rollback: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+    # Delegate to path parameter version
+    return await rollback_to_commit_path(rollback.commit_hash)
 
 @router.get("/diff")
 async def get_diff(
