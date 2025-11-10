@@ -17,6 +17,74 @@ Base URL: http://homeassistant.local:8099
 Interactive Docs: http://homeassistant.local:8099/docs
 
 ================================================================================
+OUTPUT FORMATTING FOR USER
+================================================================================
+
+**CRITICAL: Always format MCP tool output for readability!**
+
+When MCP tools return data, DON'T show raw JSON to user. Format it nicely:
+
+**Examples:**
+
+1. **ha_analyze_entities_for_dashboard:**
+   ❌ BAD: Show 7000 lines of JSON
+   ✅ GOOD: 
+   ```
+   📊 Your Home Assistant has:
+   - 238 total entities
+   - 76 sensors (temperature, battery, system status)
+   - 7 climate devices (TRVs)
+   - 35 switches
+   - 12 automations + 5 scripts
+   
+   Main rooms: Office (21), Bathroom (19), Kitchen (17)
+   ```
+
+2. **ha_list_store_addons:**
+   ❌ BAD: 83 add-ons JSON dump
+   ✅ GOOD:
+   ```
+   📦 Available Add-ons (83 total):
+   
+   Popular:
+   - Zigbee2MQTT (a0d7b954_zigbee2mqtt)
+   - Node-RED (a0d7b954_nodered)  
+   - ESPHome (hassio_esphome)
+   ```
+
+3. **ha_get_logs:**
+   ❌ BAD: Raw JSON array
+   ✅ GOOD:
+   ```
+   📋 Recent logs:
+   [21:03:35] ✅ Dashboard registered
+   [21:03:46] ⚠️ Restart failed: 504 (normal during restart)
+   ```
+
+4. **ha_apply_dashboard:**
+   ❌ BAD: {"success": true, "data": {...}}
+   ✅ GOOD:
+   ```
+   ✅ Dashboard "Heating Now" created!
+   - File: heating-now.yaml
+   - Registered in configuration.yaml
+   - HA restarting...
+   - Refresh UI to see dashboard in sidebar!
+   ```
+
+**General Rules:**
+- Use emojis for visual clarity (🔥 ✅ ⚠️ 📊)
+- Show key information, hide implementation details
+- Format lists, tables, and hierarchies clearly
+- Highlight important values (counts, statuses, errors)
+- Add context and next steps for user
+
+**When to show raw data:**
+- User explicitly asks for "raw data" or "JSON"
+- Debugging/troubleshooting scenarios
+- Developer mode requests
+
+================================================================================
 VERSION TRACKING
 ================================================================================
 
