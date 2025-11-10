@@ -4,8 +4,8 @@ description: "How I built a multi-zone heating controller and a Home Assistant A
 author: Vlad
 
 # Theme
-theme: jekyll-theme-minimal
-remote_theme: pages-themes/minimal@v0.2.0
+theme: jekyll-theme-primer
+remote_theme: pages-themes/primer@v0.6.0
 
 # Plugins
 plugins:
