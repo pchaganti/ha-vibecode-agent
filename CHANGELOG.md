@@ -2,6 +2,46 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.9.0] - 2025-11-11
+
+### 🎉 MAJOR: Helper Creation via YAML Now Works!
+
+**Breaking Discovery:** Helpers CAN be created via API using YAML + reload method!
+
+**Implementation:**
+- ✅ Write helper config to `helpers.yaml`
+- ✅ Automatically include `helpers.yaml` in `configuration.yaml`
+- ✅ Call `input_*.reload` service to apply changes
+- ✅ Helper appears immediately without HA restart
+
+**New Method:**
+```python
+# 1. Add to helpers.yaml:
+input_boolean:
+  my_switch:
+    name: "My Switch"
+    icon: "mdi:toggle-switch"
+
+# 2. Reload integration:
+await ws_client.call_service('input_boolean', 'reload', {})
+
+# 3. Helper is now available!
+```
+
+**API Changes:**
+- ✅ `POST /api/helpers/create` - NOW WORKS via YAML method
+- ✅ `DELETE /api/helpers/delete/{entity_id}` - NOW WORKS via YAML method
+- ✅ Automatic entity_id generation from name
+- ✅ Git commits for all helper changes
+- ✅ Validation and error handling
+
+**What Changed:**
+- Moved from `.storage/` approach (doesn't work) to YAML approach (works!)
+- Helpers created via API are now YAML-based (editable in UI and files)
+- Full CRUD support for all helper types
+
+**Credit:** Solution discovered via Home Assistant Community forums
+
 ## [2.7.7] - 2025-11-11
 
 ### 🚨 Critical: Added Explicit Ban on `attribute:` in Conditional Cards
