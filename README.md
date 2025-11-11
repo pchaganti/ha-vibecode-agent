@@ -1,5 +1,9 @@
 # HA Cursor Agent - Home Assistant Add-on
 
+[![Version](https://img.shields.io/badge/version-2.7.7-blue.svg)](https://github.com/Coolver/home-assistant-cursor-agent)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![MCP Package](https://img.shields.io/npm/v/@coolver/home-assistant-mcp?label=MCP%20Package)](https://www.npmjs.com/package/@coolver/home-assistant-mcp)
+
 **Let AI build your Home Assistant automations - just describe what you want in natural language** 🏠🤖
 
 Transform your smart home management! This add-on enables Cursor AI to:
@@ -11,17 +15,9 @@ Transform your smart home management! This add-on enables Cursor AI to:
 
 No more manual YAML editing or searching through documentation - just describe what you want in natural language!
 
-
-
-https://github.com/user-attachments/assets/0df48019-06c0-48dd-82ad-c7fe0734ddb3
-
-
-
 **Real example:** User says *"Install smart climate control"* → AI analyzes 7 TRVs, creates 10 automations + 9 helpers + 10 sensors + 5 scripts, deploys everything, and it just works!
 
-[![Version](https://img.shields.io/badge/version-2.7.7-blue.svg)](https://github.com/Coolver/home-assistant-cursor-agent)
-[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-[![MCP Package](https://img.shields.io/npm/v/@coolver/home-assistant-mcp?label=MCP%20Package)](https://www.npmjs.com/package/@coolver/home-assistant-mcp)
+https://github.com/user-attachments/assets/0df48019-06c0-48dd-82ad-c7fe0734ddb3
 
 ---
 
