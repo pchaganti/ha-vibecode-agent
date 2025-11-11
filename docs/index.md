@@ -110,6 +110,25 @@ Along the way, I also added support for:
 - Installing modules and HACS components without manually accessing the device  
 - Keeping automation versions tracked in Git with instant rollback
 
+<h3 style="margin-top:2rem">🛠️ Installation guide: Home Assistant Cursor Agent</h3>
+
+<div style="position:relative;padding-top:56.25%;margin:1rem 0;border-radius:12px;overflow:hidden">
+  <iframe
+    src="https://www.youtube-nocookie.com/embed/RZNkNZnhMrc?rel=0&modestbranding=1"
+    title="How to install Home Assistant Cursor Agent"
+    frameborder="0"
+    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+    allowfullscreen
+    loading="lazy"
+    style="position:absolute;inset:0;width:100%;height:100%;border:0">
+  </iframe>
+</div>
+
+<p style="text-align:center;color:#666">
+Step-by-step installation and configuration guide for the Home Assistant Cursor Agent and MCP module.
+</p>
+
+
 Next steps: integrate CO and ventilation control, maybe even let the LLM suggest improved heating logic automatically.  
 (And *maybe* go to Africa.)
 
