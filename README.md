@@ -11,7 +11,11 @@ Transform your smart home management! This add-on enables Cursor AI to:
 
 No more manual YAML editing or searching through documentation - just describe what you want in natural language!
 
-[![Watch the demo](https://img.youtube.com/vi/xocbWonWdoc/hqdefault.jpg)](https://youtu.be/xocbWonWdoc "Watch the demo on YouTube")
+
+
+https://github.com/user-attachments/assets/0df48019-06c0-48dd-82ad-c7fe0734ddb3
+
+
 
 **Real example:** User says *"Install smart climate control"* → AI analyzes 7 TRVs, creates 10 automations + 9 helpers + 10 sensors + 5 scripts, deploys everything, and it just works!
 
