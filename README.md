@@ -113,7 +113,7 @@ https://github.com/user-attachments/assets/0df48019-06c0-48dd-82ad-c7fe0734ddb3
 
 ## ⚡ Quick Start (5 minutes)
  
-- [Installation guide: how to install the Home Assistant Cursor Agent](https://youtu.be/RZNkNZnhMrc)
+- [YouTube Installation guide: how to install the Home Assistant Cursor Agent](https://youtu.be/RZNkNZnhMrc)
 
 ### 1. Add Repository
 1. **Settings** → **Add-ons** → **Add-on Store** → **⋮** → **Repositories**
