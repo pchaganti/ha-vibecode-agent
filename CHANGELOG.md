@@ -2,6 +2,66 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.9.2] - 2025-11-18
+
+### ✨ NEW: Service Call API Endpoint
+
+**Added API endpoint for calling Home Assistant services**
+
+**New Endpoint:**
+- `POST /api/entities/call_service` - Call any Home Assistant service
+
+**Features:**
+- ✅ Call any Home Assistant service via REST API
+- ✅ Support for service_data and target parameters
+- ✅ Proper parameter merging (target fields merged into service_data)
+- ✅ Full error handling and logging
+
+**Parameters:**
+- `domain` (required) - Service domain (e.g., "number", "light", "climate")
+- `service` (required) - Service name (e.g., "set_value", "turn_on", "set_temperature")
+- `service_data` (optional) - Service-specific data
+- `target` (optional) - Target entity/entities
+
+**Examples:**
+```json
+// Set number value
+{
+  "domain": "number",
+  "service": "set_value",
+  "service_data": {
+    "entity_id": "number.alex_trv_local_temperature_offset",
+    "value": -2.0
+  }
+}
+
+// Turn on light
+{
+  "domain": "light",
+  "service": "turn_on",
+  "target": {"entity_id": "light.living_room"}
+}
+
+// Set climate temperature
+{
+  "domain": "climate",
+  "service": "set_temperature",
+  "target": {"entity_id": "climate.bedroom_trv_thermostat"},
+  "service_data": {"temperature": 21.0}
+}
+```
+
+**Use Cases:**
+- Configure device parameters (TRV offsets, limits, etc.)
+- Control devices (lights, switches, climate)
+- Update helper values
+- Any Home Assistant service call
+
+**Integration:**
+- Used by MCP tool `ha_call_service`
+- Enables AI to call services directly
+- Full integration with existing ha_client.call_service method
+
 ## [2.9.1] - 2025-11-11
 
 ### 🐛 FIX: Separate YAML files for each helper type

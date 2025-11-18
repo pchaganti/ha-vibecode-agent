@@ -1,6 +1,6 @@
 """Entities API endpoints"""
-from fastapi import APIRouter, HTTPException, Query
-from typing import List, Optional
+from fastapi import APIRouter, HTTPException, Query, Body
+from typing import List, Optional, Dict, Any
 import logging
 
 from app.services.ha_client import ha_client
@@ -83,4 +83,50 @@ async def list_services():
     except Exception as e:
         logger.error(f"Failed to list services: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/call_service")
+async def call_service(
+    domain: str = Body(..., description="Service domain (e.g., 'number', 'light', 'climate')"),
+    service: str = Body(..., description="Service name (e.g., 'set_value', 'turn_on', 'set_temperature')"),
+    service_data: Optional[Dict[str, Any]] = Body(None, description="Service data (e.g., {'entity_id': 'number.alex_trv_local_temperature_offset', 'value': -2.0})"),
+    target: Optional[Dict[str, Any]] = Body(None, description="Target entity/entities (e.g., {'entity_id': 'light.living_room'})")
+):
+    """
+    Call a Home Assistant service
+    
+    Examples:
+    - Set number value: {"domain": "number", "service": "set_value", "service_data": {"entity_id": "number.alex_trv_local_temperature_offset", "value": -2.0}}
+    - Turn on light: {"domain": "light", "service": "turn_on", "target": {"entity_id": "light.living_room"}}
+    - Set climate temperature: {"domain": "climate", "service": "set_temperature", "target": {"entity_id": "climate.bedroom_trv_thermostat"}, "service_data": {"temperature": 21.0}}
+    """
+    try:
+        # Combine service_data and target into data dict
+        # In Home Assistant API, target is merged with service_data
+        data = {}
+        if service_data:
+            data.update(service_data)
+        if target:
+            # Merge target fields into data (e.g., entity_id from target)
+            if 'entity_id' in target:
+                data['entity_id'] = target['entity_id']
+            if 'area_id' in target:
+                data['area_id'] = target['area_id']
+            if 'device_id' in target:
+                data['device_id'] = target['device_id']
+            # Also keep target for services that need it
+            if not any(k in data for k in ['entity_id', 'area_id', 'device_id']):
+                data['target'] = target
+        
+        result = await ha_client.call_service(domain, service, data)
+        logger.info(f"Service called: {domain}.{service}")
+        return {
+            "success": True,
+            "domain": domain,
+            "service": service,
+            "data": data,
+            "result": result
+        }
+    except Exception as e:
+        logger.error(f"Failed to call service {domain}.{service}: {e}")
+        raise HTTPException(status_code=500, detail=f"Service call failed: {str(e)}")
 
