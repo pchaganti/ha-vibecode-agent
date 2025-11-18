@@ -396,6 +396,39 @@ async def delete_helper(entity_id: str):
         except Exception as e:
             logger.debug(f"Could not delete via config entry (helper may not exist or already deleted): {e}")
         
+        # Try to delete via entity registry (for restored entities)
+        if not deleted_via_yaml and not deleted_via_config_entry:
+            try:
+                state = await ha_client.get_state(entity_id)
+                if state and state.get('attributes', {}).get('restored', False):
+                    # Helper is restored - try to delete via entity registry
+                    logger.info(f"Helper {entity_id} is restored, attempting to delete via entity registry")
+                    ws_client = await get_ws_client()
+                    
+                    # Get entity registry entry
+                    registry_result = await ws_client._send_message({
+                        'type': 'config/entity_registry/get',
+                        'entity_id': entity_id
+                    })
+                    
+                    if isinstance(registry_result, dict) and 'result' in registry_result:
+                        registry_entry = registry_result['result']
+                        if registry_entry:
+                            # Delete from entity registry
+                            delete_registry_result = await ws_client._send_message({
+                                'type': 'config/entity_registry/remove',
+                                'entity_id': entity_id
+                            })
+                            
+                            if isinstance(delete_registry_result, dict) and delete_registry_result.get('success', False):
+                                deleted_via_config_entry = True
+                                logger.info(f"✅ Deleted restored helper {entity_id} via entity registry")
+                            elif delete_registry_result is None:
+                                deleted_via_config_entry = True
+                                logger.info(f"✅ Deleted restored helper {entity_id} via entity registry (result: None)")
+            except Exception as e:
+                logger.debug(f"Could not delete via entity registry: {e}")
+        
         # If neither method worked, check if helper actually exists
         if not deleted_via_yaml and not deleted_via_config_entry:
             # Check if helper exists in HA
