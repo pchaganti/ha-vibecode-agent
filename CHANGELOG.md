@@ -2,6 +2,24 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.9.8] - 2025-11-18
+
+### 🔧 IMPROVED: WebSocket Deletion for All Helpers
+
+**Attempt WebSocket deletion for all helpers, not just storage helpers**
+
+**Changes:**
+- ✅ Try entity registry removal via WebSocket for all helpers (YAML-managed and storage)
+- ✅ YAML-managed helpers may be deleted temporarily (will restore on restart if still in YAML)
+- ✅ Storage helpers will be permanently deleted
+- ✅ Better logging to distinguish between YAML-managed and storage helpers
+- ✅ Clear warnings when YAML-managed helpers are deleted (may restore)
+
+**Technical Details:**
+- Uses `config/entity_registry/remove` WebSocket API for all helpers
+- YAML-managed helpers: deletion may work temporarily but will restore if still in YAML
+- Storage helpers: permanent deletion via entity registry
+
 ## [2.9.7] - 2025-11-18
 
 ### 🔧 FIX: YAML-Managed Helper Deletion Detection
