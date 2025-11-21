@@ -28,7 +28,13 @@ class HomeAssistantClient:
         self.token = token
         self.headers['Authorization'] = f'Bearer {token}'
     
-    async def _request(self, method: str, endpoint: str, data: Optional[Dict] = None) -> Dict:
+    async def _request(
+        self,
+        method: str,
+        endpoint: str,
+        data: Optional[Dict] = None,
+        params: Optional[Dict[str, Any]] = None
+    ) -> Dict:
         """Make HTTP request to HA API"""
         url = f"{self.url}/api/{endpoint}"
         
@@ -39,10 +45,11 @@ class HomeAssistantClient:
         try:
             async with aiohttp.ClientSession() as session:
                 async with session.request(
-                    method, 
-                    url, 
-                    headers=self.headers, 
+                    method,
+                    url,
+                    headers=self.headers,
                     json=data,
+                    params=params,
                     timeout=aiohttp.ClientTimeout(total=30)
                 ) as response:
                     if response.status >= 400:
@@ -100,6 +107,24 @@ class HomeAssistantClient:
     async def restart(self) -> Dict:
         """Restart Home Assistant"""
         return await self.call_service('homeassistant', 'restart', {})
+
+    async def get_logbook_entries(
+        self,
+        start_time: str,
+        end_time: Optional[str] = None,
+        entity_id: Optional[str] = None
+    ) -> List[Dict]:
+        """Fetch logbook entries from Home Assistant"""
+        if not start_time:
+            raise ValueError("start_time is required for logbook queries")
+        
+        params: Dict[str, Any] = {}
+        if end_time:
+            params['end_time'] = end_time
+        if entity_id:
+            params['entity'] = entity_id
+        
+        return await self._request('GET', f'logbook/{start_time}', params=params)
 
 # Global client instance
 ha_client = HomeAssistantClient()

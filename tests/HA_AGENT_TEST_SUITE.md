@@ -19,8 +19,9 @@
 - [Add-ons](#9-add-on-operations-13-tests) (13 tests)
 - [Dashboards](#10-dashboard-operations-4-tests) (4 tests)
 - [Repositories](#11-repository-operations-2-tests) (2 tests)
+- [Logbook](#12-logbook-operations-1-test) (1 test)
 
-**Total:** 47 tests
+**Total:** 48 tests
 
 ---
 
@@ -515,6 +516,23 @@
 
 ---
 
+## 12. Logbook Operations (1 test)
+
+### test_logbook_recent_scripts
+**Function:** `ha_logbook_entries`  
+**Parameters:**
+```json
+{
+  "domains": ["script"],
+  "lookback_minutes": 120,
+  "limit": 25
+}
+```
+**Expected:** Recent logbook entries for scripts plus summary info  
+**Success:** Response includes `entries` array with script events and `summary.scripts` data
+
+---
+
 ## 🎯 Test Execution Strategy
 
 ### Phase 1: Read-Only Tests (Safe)
@@ -549,7 +567,7 @@
 
 Track these metrics during test execution:
 
-- **Total Tests:** 47
+- **Total Tests:** 48
 - **Passed:** Count
 - **Failed:** Count
 - **Skipped:** Count
@@ -593,7 +611,7 @@ HA_AGENT_KEY=<your-token>
 **Environment:** Development/Production
 
 ## Summary
-- Total: 47
+- Total: 48
 - Passed: XX
 - Failed: XX
 - Skipped: XX
