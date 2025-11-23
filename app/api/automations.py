@@ -90,7 +90,10 @@ async def create_automation(automation: AutomationData):
         
         # Commit
         if git_manager.enabled:
-            await git_manager.commit_changes(f"Create automation: {automation.alias}")
+            await git_manager.commit_changes(
+                f"Create automation: {automation.alias}",
+                skip_if_processing=True
+            )
         
         logger.info(f"Created automation: {automation.alias}")
         
@@ -132,7 +135,10 @@ async def delete_automation(automation_id: str):
         
         # Commit
         if git_manager.enabled:
-            await git_manager.commit_changes(f"Delete automation: {automation_id}")
+            await git_manager.commit_changes(
+                f"Delete automation: {automation_id}",
+                skip_if_processing=True
+            )
         
         logger.info(f"Deleted automation: {automation_id}")
         

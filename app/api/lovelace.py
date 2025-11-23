@@ -325,7 +325,10 @@ async def apply_dashboard(request: ApplyDashboardRequest):
         # Create backup if requested
         if request.create_backup:
             logger.info("Creating backup before applying dashboard")
-            commit_msg = await git_manager.commit_changes("Before applying generated dashboard")
+            commit_msg = await git_manager.commit_changes(
+                "Before applying generated dashboard",
+                skip_if_processing=True
+            )
             logger.info(f"Backup created: {commit_msg}")
         
         # Convert config to YAML
@@ -361,7 +364,10 @@ async def apply_dashboard(request: ApplyDashboardRequest):
             commit_msg = f"Applied generated dashboard: {lovelace_path}"
             if dashboard_registered:
                 commit_msg += " (auto-registered)"
-            await git_manager.commit_changes(commit_msg)
+            await git_manager.commit_changes(
+                commit_msg,
+                skip_if_processing=True
+            )
         
         note = 'Dashboard created successfully!'
         if dashboard_registered:
@@ -407,7 +413,10 @@ async def delete_dashboard(filename: str, remove_from_config: bool = True, creat
         # Create backup if requested
         if create_backup:
             logger.info("Creating backup before deleting dashboard")
-            commit_msg = await git_manager.commit_changes(f"Before deleting dashboard: {filename}")
+            commit_msg = await git_manager.commit_changes(
+                f"Before deleting dashboard: {filename}",
+                skip_if_processing=True
+            )
             logger.info(f"Backup created: {commit_msg}")
         
         # Check if file exists
@@ -443,7 +452,10 @@ async def delete_dashboard(filename: str, remove_from_config: bool = True, creat
             commit_msg = f"Deleted dashboard: {filename}"
             if dashboard_removed:
                 commit_msg += " (removed from config)"
-            await git_manager.commit_changes(commit_msg)
+            await git_manager.commit_changes(
+                commit_msg,
+                skip_if_processing=True
+            )
         
         # Restart HA if config was modified
         if dashboard_removed:

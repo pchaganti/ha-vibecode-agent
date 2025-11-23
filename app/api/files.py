@@ -84,7 +84,10 @@ async def write_file(file_data: FileContent):
         
         # Auto-commit if git enabled
         if git_manager.enabled and git_manager.auto_backup:
-            commit = await git_manager.commit_changes(f"Write file: {file_data.path}")
+            commit = await git_manager.commit_changes(
+                f"Write file: {file_data.path}",
+                skip_if_processing=True
+            )
             if commit:
                 result['git_commit'] = commit
         
@@ -115,7 +118,10 @@ async def append_to_file(file_data: FileAppend):
         
         # Auto-commit
         if git_manager.enabled and git_manager.auto_backup:
-            commit = await git_manager.commit_changes(f"Append to file: {file_data.path}")
+            commit = await git_manager.commit_changes(
+                f"Append to file: {file_data.path}",
+                skip_if_processing=True
+            )
             if commit:
                 result['git_commit'] = commit
         

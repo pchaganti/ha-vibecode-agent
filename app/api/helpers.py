@@ -239,7 +239,10 @@ async def create_helper(helper: HelperCreate):
         
         # Commit changes
         if git_manager.enabled:
-            await git_manager.commit_changes(f"Create helper: {full_entity_id} - {helper_name}")
+            await git_manager.commit_changes(
+                f"Create helper: {full_entity_id} - {helper_name}",
+                skip_if_processing=True
+            )
         
         logger.info(f"Created helper: {full_entity_id} - {helper_name}")
         
@@ -281,15 +284,15 @@ async def delete_helper(entity_id: str):
         
         # Try to delete from YAML first
         try:
-            domain_helpers = _load_helper_file(domain)
+        domain_helpers = _load_helper_file(domain)
             if helper_id in domain_helpers:
                 # Remove helper from YAML
-                del domain_helpers[helper_id]
-                _save_helper_file(domain, domain_helpers)
-                
-                # Reload the specific helper domain
-                ws_client = await get_ws_client()
-                await ws_client.call_service(domain, 'reload', {})
+        del domain_helpers[helper_id]
+        _save_helper_file(domain, domain_helpers)
+        
+        # Reload the specific helper domain
+        ws_client = await get_ws_client()
+        await ws_client.call_service(domain, 'reload', {})
                 logger.info(f"✅ Removed {entity_id} from YAML and reloaded {domain} integration")
                 deleted_via_yaml = True
             else:
@@ -497,7 +500,10 @@ async def delete_helper(entity_id: str):
         
         # Commit changes if YAML was modified
         if deleted_via_yaml and git_manager.enabled:
-            await git_manager.commit_changes(f"Delete helper: {entity_id}")
+            await git_manager.commit_changes(
+                f"Delete helper: {entity_id}",
+                skip_if_processing=True
+            )
         
         method_used = []
         if deleted_via_yaml:

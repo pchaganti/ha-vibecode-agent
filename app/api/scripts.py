@@ -98,7 +98,10 @@ async def create_script(config: dict):
         # Commit
         if git_manager.enabled:
             script_alias = script_data.get('alias', entity_id)
-            await git_manager.commit_changes(f"Create script: {script_alias}")
+            await git_manager.commit_changes(
+                f"Create script: {script_alias}",
+                skip_if_processing=True
+            )
         
         logger.info(f"Created script: {entity_id}")
         
@@ -125,7 +128,10 @@ async def delete_script(script_id: str):
         await ha_client.reload_component('scripts')
         
         if git_manager.enabled:
-            await git_manager.commit_changes(f"Delete script: {script_id}")
+            await git_manager.commit_changes(
+                f"Delete script: {script_id}",
+                skip_if_processing=True
+            )
         
         logger.info(f"Deleted script: {script_id}")
         

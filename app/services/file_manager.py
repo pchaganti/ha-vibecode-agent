@@ -79,11 +79,14 @@ class FileManager:
         try:
             full_path = self._get_full_path(file_path)
             
-            # Create backup if file exists
+            # Create backup if file exists (but skip if processing request - checkpoint already created)
             backup_path = None
             if create_backup and full_path.exists():
                 from app.services.git_manager import git_manager
-                backup_path = await git_manager.commit_changes(f"Backup before writing {file_path}")
+                backup_path = await git_manager.commit_changes(
+                    f"Backup before writing {file_path}",
+                    skip_if_processing=True
+                )
             
             # Create parent directories if needed
             full_path.parent.mkdir(parents=True, exist_ok=True)
@@ -145,9 +148,12 @@ class FileManager:
             if not full_path.exists():
                 raise FileNotFoundError(f"File not found: {file_path}")
             
-            # Backup before delete
+            # Backup before delete (but skip if processing request - checkpoint already created)
             from app.services.git_manager import git_manager
-            await git_manager.commit_changes(f"Backup before deleting {file_path}")
+            await git_manager.commit_changes(
+                f"Backup before deleting {file_path}",
+                skip_if_processing=True
+            )
             
             full_path.unlink()
             

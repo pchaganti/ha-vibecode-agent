@@ -55,13 +55,27 @@ Before ANY modifications, you MUST:
 
 ## 3️⃣ SAFETY PROTOCOLS (MANDATORY)
 
-Before ANY write operation:
+**⚠️ CRITICAL: At the START of EVERY user request, create a checkpoint:**
 
-1. **Create backup:**
+1. **Create checkpoint (FIRST THING - before any analysis or changes):**
    ```
-   POST /api/backup/commit
-   Body: {"message": "Backup before [description]"}
+   ha_create_checkpoint(user_request="[Brief description of what user asked for]")
    ```
+   This will:
+   - Save current state with a commit
+   - Create a tag with timestamp (e.g., `checkpoint_20251123_194530`)
+   - Disable auto-commits during request processing
+   - Allow easy rollback if something goes wrong
+
+2. **At the END of request processing:**
+   ```
+   ha_end_checkpoint()
+   ```
+   This re-enables auto-commits for future requests.
+
+**Note:** During request processing, auto-commits are disabled, so all changes will be in one commit at the end (if needed).
+
+Before ANY write operation (if checkpoint was not created):
 
 2. **Show user your plan:**
    ```

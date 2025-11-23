@@ -1,5 +1,5 @@
 """Backup/Restore API endpoints"""
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
 import logging
 
 from app.models.schemas import BackupRequest, RollbackRequest, Response
@@ -135,5 +135,60 @@ async def get_diff(
         }
     except Exception as e:
         logger.error(f"Failed to get diff: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/checkpoint")
+async def create_checkpoint(user_request: str = Query(..., description="Description of the user request")):
+    """
+    Create checkpoint with tag at the start of user request processing
+    
+    This should be called at the beginning of each user request to:
+    1. Save current state with a commit
+    2. Create a tag with timestamp and user request description
+    3. Disable auto-commits during request processing
+    
+    **Example:**
+    - POST `/api/backup/checkpoint?user_request=Create nice_dark theme with dark blue header`
+    """
+    try:
+        if not git_manager.enabled:
+            raise HTTPException(status_code=400, detail="Git versioning is not enabled")
+        
+        if not user_request:
+            user_request = "User request processing"
+        
+        result = await git_manager.create_checkpoint(user_request)
+        
+        if not result["success"]:
+            raise HTTPException(status_code=500, detail=result["message"])
+        
+        logger.info(f"Created checkpoint: {result['tag']} - {user_request}")
+        
+        return {
+            "success": True,
+            "message": result["message"],
+            "commit_hash": result["commit_hash"],
+            "tag": result["tag"],
+            "timestamp": result["timestamp"]
+        }
+    except Exception as e:
+        logger.error(f"Failed to create checkpoint: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/checkpoint/end")
+async def end_checkpoint():
+    """
+    End request processing - re-enable auto-commits
+    
+    This should be called at the end of user request processing
+    """
+    try:
+        git_manager.end_request_processing()
+        return {
+            "success": True,
+            "message": "Request processing ended - auto-commits re-enabled"
+        }
+    except Exception as e:
+        logger.error(f"Failed to end checkpoint: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 

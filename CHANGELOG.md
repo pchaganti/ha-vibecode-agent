@@ -2,6 +2,43 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.9.16] - 2025-11-23
+
+### ✨ NEW: Automatic Checkpoint System for Git Versioning
+
+**Consistent checkpoint creation at the start of each user request**
+
+- ✅ Added `create_checkpoint()` method to GitManager - creates commit with tag at request start
+- ✅ Added `/api/backup/checkpoint` endpoint for creating checkpoints
+- ✅ Added `ha_create_checkpoint` and `ha_end_checkpoint` MCP tools
+- ✅ Disabled auto-commits during request processing (prevents micro-commits)
+- ✅ Checkpoints include timestamp tag (e.g., `checkpoint_20251123_194530`)
+- ✅ Updated all `commit_changes()` calls to skip during request processing
+- ✅ Updated AI instructions to automatically create checkpoint at request start
+- ✅ Updated MCP package version to 3.2.6
+
+**How it works:**
+1. At the start of each user request, `ha_create_checkpoint()` is called
+2. Creates a commit with current state (if there are changes)
+3. Creates a tag with timestamp and user request description
+4. Disables auto-commits during request processing
+5. All changes within the request are made without intermediate commits
+6. At the end, `ha_end_checkpoint()` re-enables auto-commits
+
+**Benefits:**
+- Clean git history - one checkpoint per user request instead of many micro-commits
+- Easy rollback - each checkpoint is tagged with timestamp and description
+- Better organization - each user request is a logical unit in git history
+
+**Example:**
+```
+User: "Create nice_dark theme"
+→ ha_create_checkpoint("Create nice_dark theme")
+→ Creates tag: checkpoint_20251123_194530
+→ Makes all changes (no intermediate commits)
+→ ha_end_checkpoint()
+```
+
 ## [2.9.15] - 2025-11-23
 
 ### ✨ NEW: Theme Management API & MCP Tools

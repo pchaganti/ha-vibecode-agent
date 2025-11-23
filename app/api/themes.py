@@ -259,3 +259,4 @@ async def check_theme_config():
         logger.error(f"Failed to check theme config: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+
