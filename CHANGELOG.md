@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.9.14] - 2025-11-23
+
+### 🐛 FIX: Entity Rename via WebSocket API
+
+**Fixed 404 error when renaming entities**
+
+- ✅ Changed entity rename from REST API to WebSocket API (`config/entity_registry/update`)
+- ✅ Added support for optional `new_name` parameter to update friendly name
+- ✅ Fixed "404 Not Found" error when renaming entities
+
+**Technical Details:**
+- Home Assistant Entity Registry updates must be done via WebSocket API, not REST
+- REST endpoint `/api/config/entity_registry/update/{entity_id}` doesn't exist
+- WebSocket command `config/entity_registry/update` is the correct method
+
 ## [2.9.13] - 2025-11-23
 
 ### ✨ NEW: Entity Rename Functionality

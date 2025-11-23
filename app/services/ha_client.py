@@ -126,27 +126,45 @@ class HomeAssistantClient:
         
         return await self._request('GET', f'logbook/{start_time}', params=params)
     
-    async def rename_entity(self, old_entity_id: str, new_entity_id: str) -> Dict:
+    async def rename_entity(self, old_entity_id: str, new_entity_id: str, new_name: Optional[str] = None) -> Dict:
         """
-        Rename an entity_id via Entity Registry API
+        Rename an entity_id via Entity Registry WebSocket API
         
         Args:
             old_entity_id: Current entity_id (e.g., 'climate.sonoff_trvzb_thermostat')
             new_entity_id: New entity_id (e.g., 'climate.office_trv_thermostat')
+            new_name: Optional new friendly name
             
         Returns:
             Entity registry update result
             
         Raises:
-            Exception: If rename fails
+            Exception: If rename fails or WebSocket not available
         """
-        endpoint = f"config/entity_registry/update/{old_entity_id}"
-        data = {
-            'new_entity_id': new_entity_id
-        }
+        # Import here to avoid circular dependency
+        from app.services.ha_websocket import get_ws_client
         
         logger.info(f"Renaming entity: {old_entity_id} → {new_entity_id}")
-        return await self._request('POST', endpoint, data=data)
+        
+        try:
+            ws_client = await get_ws_client()
+            
+            message = {
+                'type': 'config/entity_registry/update',
+                'entity_id': old_entity_id,
+                'new_entity_id': new_entity_id
+            }
+            
+            if new_name:
+                message['name'] = new_name
+            
+            result = await ws_client._send_message(message)
+            logger.info(f"✅ Successfully renamed entity: {old_entity_id} → {new_entity_id}")
+            return result
+            
+        except Exception as e:
+            logger.error(f"Failed to rename entity via WebSocket: {e}")
+            raise Exception(f"Failed to rename entity {old_entity_id} to {new_entity_id}: {e}")
 
 # Global client instance
 ha_client = HomeAssistantClient()

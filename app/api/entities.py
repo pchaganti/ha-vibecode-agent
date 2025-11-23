@@ -133,24 +133,26 @@ async def call_service(
 @router.post("/rename")
 async def rename_entity(
     old_entity_id: str = Body(..., description="Current entity_id (e.g., 'climate.sonoff_trvzb_thermostat')"),
-    new_entity_id: str = Body(..., description="New entity_id (e.g., 'climate.office_trv_thermostat')")
+    new_entity_id: str = Body(..., description="New entity_id (e.g., 'climate.office_trv_thermostat')"),
+    new_name: Optional[str] = Body(None, description="Optional new friendly name")
 ):
     """
-    Rename an entity_id via Entity Registry API
+    Rename an entity_id via Entity Registry WebSocket API
     
     This will update the entity_id in Home Assistant's entity registry.
     Note: After renaming, you may need to reload automations/scripts that reference the entity.
     
     Example:
-    - {"old_entity_id": "climate.sonoff_trvzb_thermostat", "new_entity_id": "climate.office_trv_thermostat"}
+    - {"old_entity_id": "climate.sonoff_trvzb_thermostat", "new_entity_id": "climate.office_trv_thermostat", "new_name": "Office TRV Thermostat"}
     """
     try:
-        result = await ha_client.rename_entity(old_entity_id, new_entity_id)
+        result = await ha_client.rename_entity(old_entity_id, new_entity_id, new_name)
         logger.info(f"Renamed entity: {old_entity_id} → {new_entity_id}")
         return {
             "success": True,
             "old_entity_id": old_entity_id,
             "new_entity_id": new_entity_id,
+            "new_name": new_name,
             "result": result
         }
     except Exception as e:
