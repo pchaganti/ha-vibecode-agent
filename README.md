@@ -65,7 +65,7 @@ https://github.com/user-attachments/assets/0df48019-06c0-48dd-82ad-c7fe0734ddb3
 - Check configuration validity
 - Real-time state monitoring
 
-### 🔌 Add-on Management (NEW in v2.3.0!) 🔥
+### 🔌 Add-on Management
 **Complete add-on lifecycle management - install, configure, and control services!**
 - Install/uninstall add-ons (Zigbee2MQTT, Node-RED, ESPHome, etc)
 - Configure add-on options
@@ -120,7 +120,7 @@ https://github.com/user-attachments/assets/0df48019-06c0-48dd-82ad-c7fe0734ddb3
 Open your **Home Assistant UI** (usually http://homeassistant.local:8123):
 
 1. Go to **Settings** → **Add-ons** → **Add-on Store** → **⋮** → **Repositories** (usually http://homeassistant.local:8123/hassio/dashboard )
-2. Add: `https://github.com/Coolver/home-assistant-cursor-agent`
+2. Add: `https://github.com/coolver/home-assistant-cursor-agent`
 3. Click **Add**
 
 ### 2. Install and Start Add-on
@@ -130,10 +130,9 @@ Still in **Home Assistant UI**:
 1. Refresh the page
 2. Find **HA Cursor Agent** → Click **INSTALL**
 3. Wait for installation to complete
-4. Go to **Configuration** tab → Keep defaults → **SAVE**
-5. Go to **Info** tab → **Start on boot: ON** → **START**
-6. **Wait for startup** (~10 seconds)
-7. Click **"Open Web UI"** button
+4. Enable → **Start on boot: ON** → and push **START** button
+5. **Wait for startup** (~10 seconds)
+6. Click **"Open Web UI"** button
 
 You'll see this interface:
 
@@ -141,11 +140,12 @@ You'll see this interface:
   <img src=".github/images/ingress-panel.jpg" alt="HA Cursor Agent Ingress Panel" width="700">
 </p>
 
-Нажми на вкладку для Cursor или VS Code в зависимости от IDE в котором вы хотите работать с вашим Home Assistant и следуйте инструкциям, вам понадобится установить и настроить Cursor или VS Code чтобы они через MCP протокол могли взаимодействовать с агентом, который вы установили на борте Home Assistant.
+7. Click the Cursor or VS Code tab (depending on which IDE you want to use with Home Assistant) and follow the setup instructions. You’ll need to install and configure Cursor or VS Code so they can connect to the HA Agent via the MCP protocol.
 
-Все готово, чтобы начать работать с вашими скриптами, автоматизациями и дашбордами Home Assistant с помощью AI.
+8. That’s it — you’re ready to start working with your Home Assistant scripts, automations and dashboards using AI.
+If you find this project useful and want to support its development, please consider giving it a [GitHub Star](https://github.com/Coolver/home-assistant-cursor-agent) ⭐
 
-Если вам нравится проект и вы хотите его развития, поставьте, пожалуйста, [GitHub Star](https://github.com/Coolver/home-assistant-cursor-agent) ⭐
+
 
 ---
 
