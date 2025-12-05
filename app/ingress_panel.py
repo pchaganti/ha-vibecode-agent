@@ -17,8 +17,8 @@ def generate_ingress_html(api_key: str, agent_version: str) -> str:
     Returns:
         Rendered HTML string
     """
-    # Full JSON config for user to copy
-    json_config = f'''{{
+    # Cursor JSON config for user to copy
+    cursor_json_config = f'''{{
   "mcpServers": {{
     "home-assistant": {{
       "command": "npx",
@@ -31,6 +31,18 @@ def generate_ingress_html(api_key: str, agent_version: str) -> str:
   }}
 }}'''
     
+    # VS Code + Copilot JSON config for user to copy
+    vscode_json_config = f'''{{
+  "id": "home-assistant",
+  "type": "stdio",
+  "command": "npx",
+  "args": ["-y", "@coolver/home-assistant-mcp@latest"],
+  "env": {{
+    "HA_AGENT_URL": "http://homeassistant.local:8099",
+    "HA_AGENT_KEY": "{api_key}"
+  }}
+}}'''
+    
     # Load Jinja2 template
     template_path = Path(__file__).parent / 'templates' / 'ingress_panel.html'
     template_content = template_path.read_text(encoding='utf-8')
@@ -40,7 +52,8 @@ def generate_ingress_html(api_key: str, agent_version: str) -> str:
     html = template.render(
         api_key=api_key,
         agent_version=agent_version,
-        json_config=json_config
+        cursor_json_config=cursor_json_config,
+        vscode_json_config=vscode_json_config
     )
     
     return html

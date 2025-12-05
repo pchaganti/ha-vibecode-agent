@@ -300,6 +300,54 @@
                 transform: rotate(360deg);
             }
         }
+        
+        /* Tabs Styles */
+        .tabs-container {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 24px;
+            border-bottom: 2px solid #30363d;
+            padding-bottom: 0;
+        }
+        
+        .tab {
+            padding: 12px 24px;
+            background: transparent;
+            border: none;
+            border-bottom: 3px solid transparent;
+            color: #8b949e;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 16px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: -2px;
+        }
+        
+        .tab:hover {
+            color: #c9d1d9;
+            background: rgba(88, 166, 255, 0.1);
+        }
+        
+        .tab.active {
+            color: #58a6ff;
+            border-bottom-color: #58a6ff;
+        }
+        
+        .tab svg {
+            width: 1.1em;
+            height: 1.1em;
+        }
+        
+        .content-section {
+            display: none;
+        }
+        
+        .content-section.active {
+            display: block;
+        }
     </style>
 </head>
 <body>
@@ -313,9 +361,27 @@
         </h1>
         
         <p style="color: #8b949e; margin: 10px 0 20px 0;">
-            Connect Cursor AI to your Home Assistant
+            Connect AI to your Home Assistant
         </p>
         
+        <div class="tabs-container">
+            <button class="tab active" id="tab-cursor" onclick="switchTab('cursor')">
+                <svg class="icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M17 7h-4v2h4c1.65 0 3 1.35 3 3s-1.35 3-3 3h-4v2h4c2.76 0 5-2.24 5-5s-2.24-5-5-5zm-6 8H7c-1.65 0-3-1.35-3-3s1.35-3 3-3h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-2zm-3-4h8v2H8v-2z"/>
+                </svg>
+                Cursor
+            </button>
+            <button class="tab" id="tab-vscode" onclick="switchTab('vscode')">
+                <svg class="icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M17 7h-4v2h4c1.65 0 3 1.35 3 3s-1.35 3-3 3h-4v2h4c2.76 0 5-2.24 5-5s-2.24-5-5-5zm-6 8H7c-1.65 0-3-1.35-3-3s1.35-3 3-3h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-2zm-3-4h8v2H8v-2z"/>
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" opacity="0.3"/>
+                </svg>
+                VS Code + Copilot
+            </button>
+        </div>
+        
+        <!-- Cursor Content Section -->
+        <div id="cursor-content" class="content-section active">
         <div class="card">
             <h2>
                 <svg class="icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -337,7 +403,7 @@
             </div>
             
             <div class="config-block">
-                <pre id="configText">{{ json_config }}</pre>
+                <pre id="cursorConfigText">{{ cursor_json_config }}</pre>
             </div>
             
             <div style="display: flex; gap: 12px; flex-wrap: wrap;">
@@ -414,6 +480,141 @@
                 <li><a href="https://www.npmjs.com/package/@coolver/home-assistant-mcp" target="_blank" style="color: #58a6ff; text-decoration: none;">MCP Package</a></li>
             </ul>
         </div>
+        </div>
+        <!-- End Cursor Content Section -->
+        
+        <!-- VS Code + Copilot Content Section -->
+        <div id="vscode-content" class="content-section">
+        <div class="card">
+            <h2>
+                <svg class="icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M19 2h-4.18C14.4.84 13.3 0 12 0c-1.3 0-2.4.84-2.82 2H5c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-7 0c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm7 18H5V4h2v3h10V4h2v16z"/>
+                </svg>
+                Step 1: Copy Configuration
+            </h2>
+            <p style="color: #8b949e; margin-bottom: 16px;">
+                This is your VS Code + Copilot MCP server configuration.
+            </p>
+            
+            <div class="info-box warning" style="margin-bottom: 16px;">
+                <strong>
+                    <svg class="icon icon-sm" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" style="margin-right: 4px;">
+                        <path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/>
+                    </svg>
+                    Security Notice:
+                </strong> This configuration contains your Agent Key. Keep it safe and never commit it to public repositories!
+            </div>
+            
+            <div class="config-block">
+                <pre id="vscodeConfigText">{{ vscode_json_config }}</pre>
+            </div>
+            
+            <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+                <button class="copy-btn" id="vscodeCopyBtn" onclick="copyConfig()" style="flex: 1;">
+                    <span id="vscodeCopyBtnIcon" class="icon-replaceable">
+                        <svg class="icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M19 2h-4.18C14.4.84 13.3 0 12 0c-1.3 0-2.4.84-2.82 2H5c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-7 0c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm7 18H5V4h2v3h10V4h2v16z"/>
+                        </svg>
+                    </span>
+                    <span id="vscodeCopyBtnText">Copy Configuration</span>
+                </button>
+                <button class="btn-regenerate" id="vscodeRegenerateBtn" onclick="confirmRegenerate()">
+                    <span id="vscodeRegenIcon" class="icon-replaceable">
+                        <svg class="icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/>
+                        </svg>
+                    </span>
+                    <span id="vscodeRegenText">Regenerate Key</span>
+                </button>
+            </div>
+        </div>
+        
+        <div class="card">
+            <h2>
+                <svg class="icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M2.81 14.12L5.64 11.3l-1.41-1.42L1.4 12.7c-.39.39-.39 1.02 0 1.41l2.41 2.41zm16.78-1.42l-2.41-2.41c-.39-.39-1.02-.39-1.41 0l-1.42 1.41 3.83 3.83 1.42-1.41c.39-.39.39-1.02 0-1.42zm-1.42-5.29l-3.83-3.83-1.42 1.41c-.39.39-.39 1.02 0 1.41l2.41 2.41 1.42-1.41zm-5.17 0L9.88 7.15l-3.83 3.83 1.42 1.41 3.83-3.83zm-1.42-1.42L8.46 3.7c-.39-.39-1.02-.39-1.41 0L4.64 6.11l3.83 3.83 1.42-1.41zM22.6 4.7l-2.41-2.41c-.39-.39-1.02-.39-1.41 0l-1.42 1.41 3.83 3.83 1.41-1.41c.39-.39.39-1.02 0-1.42z"/>
+                </svg>
+                Step 2: Setup VS Code + Copilot
+            </h2>
+            
+            <div class="step">
+                <div class="step-number">1</div>
+                <div class="step-content">
+                    <h3>Install GitHub Copilot & Copilot Chat</h3>
+                    <p>Make sure <strong>GitHub Copilot</strong> and <strong>Copilot Chat</strong> are installed and enabled in VS Code.</p>
+                </div>
+            </div>
+            
+            <div class="step">
+                <div class="step-number">2</div>
+                <div class="step-content">
+                    <h3>Open MCP Configuration</h3>
+                    <p>Open the <strong>Command Palette</strong> in VS Code:</p>
+                    <p style="margin-top: 8px;">
+                        <code>Ctrl+Shift+P</code> (Windows / Linux)<br>
+                        <code>Cmd+Shift+P</code> (macOS)
+                    </p>
+                    <p style="margin-top: 8px;">Type: <strong>GitHub Copilot: Configure MCP Servers</strong> (or search for "MCP")</p>
+                    <p>Click it – this will open the MCP servers configuration view.</p>
+                </div>
+            </div>
+            
+            <div class="step">
+                <div class="step-number">3</div>
+                <div class="step-content">
+                    <h3>Add MCP Server</h3>
+                    <p>In the MCP servers view:</p>
+                    <ul style="margin-left: 20px; margin-top: 8px; color: #8b949e;">
+                        <li>Click <strong>"Add server"</strong> (or <strong>"+ New server"</strong>)</li>
+                        <li>Fill in the fields using the configuration you copied above:
+                            <ul style="margin-left: 20px; margin-top: 4px;">
+                                <li><strong>ID / Name:</strong> <code>home-assistant</code></li>
+                                <li><strong>Type / Transport:</strong> <code>stdio</code></li>
+                                <li><strong>Command:</strong> <code>npx</code></li>
+                                <li><strong>Args:</strong> <code>-y</code>, <code>@coolver/home-assistant-mcp@latest</code></li>
+                                <li><strong>Environment variables:</strong> Copy from the JSON above</li>
+                            </ul>
+                        </li>
+                        <li>Save the server configuration</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="step">
+                <div class="step-number">4</div>
+                <div class="step-content">
+                    <h3>Allow Server in Copilot Chat</h3>
+                    <p>Open <strong>GitHub Copilot Chat</strong> in VS Code (side panel with the Copilot icon).</p>
+                    <p style="margin-top: 8px;">Start a new chat. In the tools / MCP section you should now see a server called <code>home-assistant</code>.</p>
+                    <p style="margin-top: 8px;">If Copilot asks whether it's allowed to use this tool/server, click <strong>Allow</strong>.</p>
+                </div>
+            </div>
+            
+            <div class="step">
+                <div class="step-number">5</div>
+                <div class="step-content">
+                    <h3>Test Connection</h3>
+                    <p>Ask Copilot Chat: <em>"Use the home-assistant tools to list my Home Assistant entities"</em></p>
+                    <p style="margin-top: 8px; color: #8b949e; font-size: 13px;">Or try: <em>"Ask the home-assistant MCP server to inspect my current automations"</em></p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <h2>
+                <svg class="icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/>
+                </svg>
+                Resources
+            </h2>
+            <ul style="margin-left: 20px; color: #8b949e;">
+                <li><a href="/docs" target="_blank" style="color: #58a6ff; text-decoration: none;">API Documentation</a></li>
+                <li><a href="https://github.com/Coolver/home-assistant-cursor-agent" target="_blank" style="color: #58a6ff; text-decoration: none;">GitHub Repository</a></li>
+                <li><a href="https://www.npmjs.com/package/@coolver/home-assistant-mcp" target="_blank" style="color: #58a6ff; text-decoration: none;">MCP Package</a></li>
+            </ul>
+        </div>
+        </div>
+        <!-- End VS Code + Copilot Content Section -->
     </div>
     
     <div class="success-message" id="successMessage">
@@ -424,8 +625,34 @@
     </div>
     
     <script>
-        let fullConfig = `{{ json_config }}`;
+        let currentTab = 'cursor';
+        let cursorConfig = `{{ cursor_json_config }}`;
+        let vscodeConfig = `{{ vscode_json_config }}`;
         let fullKey = "{{ api_key }}";
+        
+        // Tab switching function
+        function switchTab(tabName) {
+            currentTab = tabName;
+            
+            // Update tab buttons
+            document.getElementById('tab-cursor').classList.toggle('active', tabName === 'cursor');
+            document.getElementById('tab-vscode').classList.toggle('active', tabName === 'vscode');
+            
+            // Update content sections
+            document.getElementById('cursor-content').classList.toggle('active', tabName === 'cursor');
+            document.getElementById('vscode-content').classList.toggle('active', tabName === 'vscode');
+            
+            // Save preference to localStorage
+            localStorage.setItem('ha-agent-tab', tabName);
+        }
+        
+        // Load saved tab preference on page load
+        window.addEventListener('DOMContentLoaded', function() {
+            const savedTab = localStorage.getItem('ha-agent-tab');
+            if (savedTab === 'vscode' || savedTab === 'cursor') {
+                switchTab(savedTab);
+            }
+        });
         
         // SVG Icon functions
         function getIconSVG(iconName) {
@@ -447,18 +674,26 @@
         }
         
         function copyConfig() {
-            const btn = document.getElementById('copyBtn');
-            const btnIcon = document.getElementById('copyBtnIcon');
-            const btnText = document.getElementById('copyBtnText');
+            // Get the correct config and button elements based on active tab
+            const config = currentTab === 'cursor' ? cursorConfig : vscodeConfig;
+            const btn = currentTab === 'cursor' 
+                ? document.getElementById('copyBtn')
+                : document.getElementById('vscodeCopyBtn');
+            const btnIcon = currentTab === 'cursor'
+                ? document.getElementById('copyBtnIcon')
+                : document.getElementById('vscodeCopyBtnIcon');
+            const btnText = currentTab === 'cursor'
+                ? document.getElementById('copyBtnText')
+                : document.getElementById('vscodeCopyBtnText');
             
             try {
                 // Try modern Clipboard API first
                 if (navigator.clipboard && navigator.clipboard.writeText) {
-                    navigator.clipboard.writeText(fullConfig).then(() => {
+                    navigator.clipboard.writeText(config).then(() => {
                         showCopiedState(btn, btnIcon, btnText);
                     }).catch(err => {
                         // Fallback to legacy method
-                        if (copyToClipboardFallback(fullConfig)) {
+                        if (copyToClipboardFallback(config)) {
                             showCopiedState(btn, btnIcon, btnText);
                         } else {
                             showErrorState(btn, btnIcon, btnText, err);
@@ -466,7 +701,7 @@
                     });
                 } else {
                     // Use legacy method directly
-                    if (copyToClipboardFallback(fullConfig)) {
+                    if (copyToClipboardFallback(config)) {
                         showCopiedState(btn, btnIcon, btnText);
                     } else {
                         showErrorState(btn, btnIcon, btnText, 'Clipboard API not available');
@@ -546,9 +781,16 @@
         }
         
         async function regenerateKey() {
-            const btn = document.getElementById('regenerateBtn');
-            const icon = document.getElementById('regenIcon');
-            const text = document.getElementById('regenText');
+            // Get the correct button elements based on active tab
+            const btn = currentTab === 'cursor'
+                ? document.getElementById('regenerateBtn')
+                : document.getElementById('vscodeRegenerateBtn');
+            const icon = currentTab === 'cursor'
+                ? document.getElementById('regenIcon')
+                : document.getElementById('vscodeRegenIcon');
+            const text = currentTab === 'cursor'
+                ? document.getElementById('regenText')
+                : document.getElementById('vscodeRegenText');
             
             // Show loading state
             btn.classList.add('regenerating');
@@ -576,17 +818,22 @@
                 const result = await response.json();
                 
                 if (result.success) {
-                    // Update fullKey and fullConfig with new key
+                    // Update fullKey and both configs with new key
                     fullKey = result.new_key;
                     
-                    // Update config text with new key
-                    const newConfig = fullConfig.replace(
+                    // Update cursor config
+                    cursorConfig = cursorConfig.replace(
                         /"HA_AGENT_KEY": ".*?"/,
                         `"HA_AGENT_KEY": "${result.new_key}"`
                     );
-                    fullConfig = newConfig;
-                    document.getElementById('configText').textContent = newConfig;
+                    document.getElementById('cursorConfigText').textContent = cursorConfig;
                     
+                    // Update vscode config
+                    vscodeConfig = vscodeConfig.replace(
+                        /"HA_AGENT_KEY": ".*?"/,
+                        `"HA_AGENT_KEY": "${result.new_key}"`
+                    );
+                    document.getElementById('vscodeConfigText').textContent = vscodeConfig;
                     
                     // Show success
                     setIcon(icon, 'check');
@@ -596,9 +843,11 @@
                     // Show popup
                     showSuccess();
                     
-                    // Alert user to update Cursor
+                    // Alert user to update configuration
+                    const editorName = currentTab === 'cursor' ? 'Cursor' : 'VS Code';
+                    const configPath = currentTab === 'cursor' ? '~/.cursor/mcp.json' : 'VS Code MCP settings';
                     setTimeout(() => {
-                        alert('New API Key generated!\\n\\nIMPORTANT:\\n1. Copy the new configuration (button above)\\n2. Update ~/.cursor/mcp.json with new key\\n3. Restart Cursor\\n\\nOld key is now invalid!');
+                        alert(`New API Key generated!\\n\\nIMPORTANT:\\n1. Copy the new configuration (button above)\\n2. Update ${configPath} with new key\\n3. Restart ${editorName}\\n\\nOld key is now invalid!`);
                     }, 500);
                     
                     // Reset button after 3 seconds
