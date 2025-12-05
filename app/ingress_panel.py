@@ -31,15 +31,17 @@ def generate_ingress_html(api_key: str, agent_version: str) -> str:
   }}
 }}'''
     
-    # VS Code + Copilot JSON config for user to copy
+    # VS Code + Copilot JSON config for user to copy (wrapped in servers object)
     vscode_json_config = f'''{{
-  "id": "home-assistant",
-  "type": "stdio",
-  "command": "npx",
-  "args": ["-y", "@coolver/home-assistant-mcp@latest"],
-  "env": {{
-    "HA_AGENT_URL": "http://homeassistant.local:8099",
-    "HA_AGENT_KEY": "{api_key}"
+  "servers": {{
+    "home-assistant": {{
+      "command": "npx",
+      "args": ["-y", "@coolver/home-assistant-mcp@latest"],
+      "env": {{
+        "HA_AGENT_URL": "http://homeassistant.local:8099",
+        "HA_AGENT_KEY": "{api_key}"
+      }}
+    }}
   }}
 }}'''
     
