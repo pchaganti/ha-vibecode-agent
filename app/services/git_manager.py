@@ -271,7 +271,8 @@ secrets.yaml
                     logger.warning(f"git log failed, using iter_commits fallback: {e2}")
                     commit_count = len(list(self.repo.iter_commits('HEAD', max_count=1000)))
             
-            logger.debug(f"Checking if cleanup needed: commit_count={commit_count}, max_backups={self.max_backups}")
+            # Always log this check (not debug) to see what's happening
+            logger.info(f"Checking cleanup: commit_count={commit_count}, max_backups={self.max_backups}, need_cleanup={commit_count >= self.max_backups}")
             if commit_count >= self.max_backups:
                 logger.info(f"⚠️ Cleanup triggered: commit_count ({commit_count}) >= max_backups ({self.max_backups})")
                 # At max_backups (30), cleanup to keep only 20 commits
