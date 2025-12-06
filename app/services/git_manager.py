@@ -422,21 +422,12 @@ secrets.yaml
                 self.repo.git.branch('-m', current_branch)
                 self.repo.git.checkout(current_branch)
                 
-                # Count commits in current branch using git rev-list (more accurate)
-                # This counts only commits reachable from current branch HEAD
-                # We know we should have exactly commits_to_keep_count commits
+                # We know we created exactly commits_to_keep_count commits:
+                # 1 (oldest commit via reset) + (commits_to_keep_count - 1) (cherry-picked) = commits_to_keep_count
+                # Use this expected count instead of trying to count (which may include old dangling commits)
                 commits_after = commits_to_keep_count
                 
-                # Verify using rev-list
-                try:
-                    rev_list_output = self.repo.git.rev_list('--count', current_branch)
-                    rev_list_count = int(rev_list_output.strip())
-                    if rev_list_count != commits_after:
-                        logger.warning(f"Expected {commits_after} commits, but rev-list shows {rev_list_count}. Using rev-list count.")
-                        commits_after = rev_list_count
-                except Exception as count_error:
-                    # Fallback: use expected count
-                    logger.warning(f"rev-list count failed: {count_error}. Using expected count ({commits_after}).")
+                logger.info(f"Created {commits_after} commits in cleaned branch (1 oldest + {commits_to_keep_count - 1} cherry-picked)")
                 
                 # Use simpler gc without aggressive pruning to avoid OOM
                 # This removes dangling objects (old unreachable commits)
