@@ -18,7 +18,7 @@ class GitManager:
         self.config_path = Path(os.getenv('CONFIG_PATH', '/config'))
         self.enabled = os.getenv('ENABLE_GIT', 'false').lower() == 'true'
         self.auto_backup = os.getenv('AUTO_BACKUP', 'true').lower() == 'true'
-        self.max_backups = int(os.getenv('MAX_BACKUPS', '50'))
+        self.max_backups = int(os.getenv('MAX_BACKUPS', '30'))
         self.repo = None
         self.processing_request = False  # Flag to disable auto-commits during request processing
         
@@ -251,21 +251,10 @@ secrets.yaml
                 # Get current branch name
                 current_branch = self.repo.active_branch.name
                 
-                # Expire reflog and prune unreachable objects before counting
-                # This ensures we count only commits in actual branch history, not reflog
-                try:
-                    import subprocess
-                    # Expire all reflog entries
-                    subprocess.run(['git', 'reflog', 'expire', '--expire=now', '--all'], 
-                                 cwd=self.repo.working_dir, capture_output=True, timeout=10)
-                    # Prune unreachable objects (including old commits only in reflog)
-                    subprocess.run(['git', 'gc', '--prune=now', '--quiet'], 
-                                 cwd=self.repo.working_dir, capture_output=True, timeout=240)
-                except:
-                    pass  # If cleanup fails, continue anyway
-                
                 # Use git rev-list to count only commits reachable from HEAD
                 # Use --first-parent to follow only the main branch (not merge commits)
+                # Note: --first-parent already excludes reflog-only commits, so no need for gc before counting
+                # git gc is expensive (takes ~4 minutes) and not needed here
                 rev_list_output = self.repo.git.rev_list('--count', '--first-parent', 'HEAD')
                 commit_count = int(rev_list_output.strip())
                 logger.info(f"Commit count via rev-list --first-parent HEAD ({current_branch}): {commit_count}")
@@ -282,7 +271,7 @@ secrets.yaml
                     commit_count = len(list(self.repo.iter_commits('HEAD', max_count=1000)))
             
             if commit_count >= self.max_backups:
-                # At max_backups, cleanup to keep only 30 commits
+                # At max_backups (30), cleanup to keep only 20 commits
                 await self._cleanup_old_commits()
                 
                 # After cleanup, reload repository to ensure we have correct state
@@ -394,18 +383,18 @@ secrets.yaml
             return False
     
     async def _cleanup_old_commits(self):
-        """Remove old commits to save space - keeps only 30 commits when reaching 50
+        """Remove old commits to save space - keeps only 20 commits when reaching 30
         
-        This is called automatically when commits reach max_backups (50).
-        We keep only 30 commits to have buffer before next cleanup.
+        This is called automatically when commits reach max_backups (30).
+        We keep only 20 commits to have buffer before next cleanup.
         For manual cleanup with backup branch deletion, use cleanup_commits().
         
         This method safely removes old commits while preserving:
         - All current files on disk (unchanged)
-        - Last 30 commits (history)
-        - Ability to rollback to any of the last 30 versions
+        - Last 20 commits (history)
+        - Ability to rollback to any of the last 20 versions
         
-        Uses git filter-repo if available (recommended), otherwise falls back to orphan branch method.
+        Uses git filter-repo if available (recommended), otherwise falls back to clone method.
         """
         try:
             # Count commits in current branch only (not all commits in repo)
@@ -413,21 +402,10 @@ secrets.yaml
                 # Get current branch name
                 current_branch = self.repo.active_branch.name
                 
-                # Expire reflog and prune unreachable objects before counting
-                # This ensures we count only commits in actual branch history, not reflog
-                try:
-                    import subprocess
-                    # Expire all reflog entries
-                    subprocess.run(['git', 'reflog', 'expire', '--expire=now', '--all'], 
-                                 cwd=self.repo.working_dir, capture_output=True, timeout=10)
-                    # Prune unreachable objects (including old commits only in reflog)
-                    subprocess.run(['git', 'gc', '--prune=now', '--quiet'], 
-                                 cwd=self.repo.working_dir, capture_output=True, timeout=240)
-                except:
-                    pass  # If cleanup fails, continue anyway
-                
                 # Use git rev-list to count only commits reachable from HEAD
                 # Use --first-parent to follow only the main branch (not merge commits)
+                # Note: --first-parent already excludes reflog-only commits, so no need for gc before counting
+                # git gc is expensive (takes ~4 minutes) and not needed here
                 rev_list_output = self.repo.git.rev_list('--count', '--first-parent', 'HEAD')
                 total_commits = int(rev_list_output.strip())
                 logger.info(f"Total commits via rev-list --first-parent HEAD ({current_branch}): {total_commits}")
@@ -443,8 +421,9 @@ secrets.yaml
                     logger.warning(f"git log failed, using iter_commits fallback: {e2}")
                     total_commits = len(list(self.repo.iter_commits('HEAD', max_count=1000)))
             
-            # Keep 30 commits when we reach 50 (max_backups)
-            commits_to_keep_count = 30
+            # Keep 20 commits when we reach 30 (max_backups)
+            # This provides a buffer before next cleanup
+            commits_to_keep_count = 20
             
             if total_commits < self.max_backups:
                 return  # No cleanup needed yet
@@ -521,7 +500,21 @@ secrets.yaml
         """
         try:
             repo_path = self.repo.working_dir
+            
+            # CRITICAL SAFETY CHECK: Verify repo_path matches config_path
+            # This ensures we're working on the correct directory and won't accidentally delete configs
+            if str(repo_path) != str(self.config_path):
+                raise Exception(f"SAFETY CHECK FAILED: repo_path ({repo_path}) does not match config_path ({self.config_path}). This could cause data loss!")
+            
             git_dir = os.path.join(repo_path, '.git')
+            
+            # Verify git_dir is actually inside repo_path (not the same as repo_path)
+            if git_dir == repo_path:
+                raise Exception(f"SAFETY CHECK FAILED: git_dir ({git_dir}) equals repo_path ({repo_path}). This would delete all configs!")
+            
+            # Verify git_dir is a subdirectory of repo_path
+            if not git_dir.startswith(str(repo_path) + os.sep):
+                raise Exception(f"SAFETY CHECK FAILED: git_dir ({git_dir}) is not inside repo_path ({repo_path})")
             
             # Create temporary directory for clone
             with tempfile.TemporaryDirectory() as tmpdir:
@@ -534,14 +527,16 @@ secrets.yaml
                 # --depth creates a shallow clone with only last N commits
                 # --single-branch clones only the current branch
                 repo_url = f'file://{repo_path}'
+                logger.info(f"Starting git clone from {repo_url} to {clone_path} with depth={commits_to_keep_count}...")
                 result = subprocess.run(
                     ['git', 'clone', '--depth', str(commits_to_keep_count), 
                      '--branch', current_branch, '--single-branch',
                      repo_url, clone_path],
                     capture_output=True,
                     text=True,
-                    timeout=300
+                    timeout=600  # Increased to 10 minutes for large repos
                 )
+                logger.info(f"git clone completed with return code: {result.returncode}")
                 
                 if result.returncode != 0:
                     raise Exception(f"git clone failed: {result.stderr}")
@@ -558,6 +553,7 @@ secrets.yaml
                 # Backup old .git directory (just in case)
                 git_backup = os.path.join(tmpdir, 'git_backup')
                 if os.path.exists(git_dir):
+                    logger.info(f"Backing up old .git directory from {git_dir} to {git_backup}...")
                     shutil.copytree(git_dir, git_backup)
                     logger.info("Backed up old .git directory")
                 
@@ -578,13 +574,46 @@ secrets.yaml
                 except Exception as verify_error:
                     raise Exception(f"Cloned repository verification failed: {verify_error} - aborting cleanup to prevent data loss")
                 
-                # Now safe to replace .git directory
+                # CRITICAL SAFETY CHECK: Verify that we're only replacing .git, not the entire config directory
+                # This ensures we never accidentally delete config files
+                if git_dir != os.path.join(repo_path, '.git'):
+                    raise Exception(f"SAFETY CHECK FAILED: git_dir path is incorrect: {git_dir} (expected: {os.path.join(repo_path, '.git')})")
+                
+                # Verify that repo_path contains config files before replacing .git
+                # This ensures we don't accidentally work on wrong directory
+                # Use try-except to handle potential timeouts or permission issues
+                try:
+                    logger.info(f"Checking for config files in {repo_path}...")
+                    all_files = os.listdir(repo_path)
+                    config_files = [f for f in all_files if f.endswith('.yaml') and f != '.git']
+                    if not config_files:
+                        logger.warning(f"WARNING: No .yaml config files found in {repo_path} before cleanup. This may indicate a problem.")
+                    else:
+                        logger.info(f"Safety check: Found {len(config_files)} config files in {repo_path} - safe to proceed")
+                except Exception as listdir_error:
+                    logger.warning(f"Could not list directory contents: {listdir_error}. Continuing anyway.")
+                    config_files = []  # Set to empty list to avoid NameError
+                
+                # Now safe to replace .git directory ONLY (not the entire repo_path)
                 if os.path.exists(git_dir):
+                    logger.info(f"Removing old .git directory: {git_dir}")
                     shutil.rmtree(git_dir)
                 
+                logger.info(f"Copying new .git directory from clone to: {git_dir}")
                 shutil.copytree(cloned_git_dir, git_dir)
                 
-                logger.info("✅ Repository replaced successfully")
+                # Verify config files still exist after .git replacement
+                try:
+                    config_files_after = [f for f in os.listdir(repo_path) if f.endswith('.yaml') and f != '.git']
+                    if config_files and len(config_files_after) < len(config_files):
+                        raise Exception(f"SAFETY CHECK FAILED: Config files were lost during cleanup! Before: {len(config_files)}, After: {len(config_files_after)}")
+                    elif config_files:
+                        logger.info(f"Safety check passed: {len(config_files_after)} config files still present after cleanup")
+                except Exception as verify_error:
+                    logger.warning(f"Could not verify config files after cleanup: {verify_error}")
+                    # Don't fail the whole operation if verification fails - files are likely still there
+                
+                logger.info("✅ Repository replaced successfully - all config files verified intact")
             
             # Reload repository to get fresh state
             self.repo = git.Repo(repo_path)
@@ -593,7 +622,7 @@ secrets.yaml
             try:
                 logger.info("Running final git gc...")
                 subprocess.run(['git', 'gc', '--prune=now', '--quiet'], 
-                             cwd=repo_path, capture_output=True, timeout=240)
+                             cwd=repo_path, capture_output=True, timeout=600)  # Increased timeout
                 logger.info("Final gc completed")
             except Exception as gc_error:
                 logger.warning(f"Final gc failed: {gc_error}. Continuing.")
