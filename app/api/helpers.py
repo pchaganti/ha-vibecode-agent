@@ -409,7 +409,7 @@ async def delete_helper(entity_id: str, commit_message: Optional[str] = Query(No
         try:
             # Check if entity exists (404 is expected if already deleted from YAML)
             try:
-                state = await ha_client.get_state(entity_id)
+                state = await ha_client.get_state(entity_id, suppress_404_logging=True)
             except Exception as state_error:
                 # 404 is expected when entity doesn't exist (already deleted or never existed)
                 error_str = str(state_error)
@@ -498,7 +498,7 @@ async def delete_helper(entity_id: str, commit_message: Optional[str] = Query(No
             # Check if helper exists in HA
             helper_exists = False
             try:
-                state = await ha_client.get_state(entity_id)
+                state = await ha_client.get_state(entity_id, suppress_404_logging=True)
                 if state:
                     helper_exists = True
             except:
