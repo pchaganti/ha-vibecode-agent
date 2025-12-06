@@ -127,6 +127,14 @@ async def call_service(
             # Remove return_response from data if present (will be added as query param)
             if 'return_response' in data:
                 data = {k: v for k, v in data.items() if k != 'return_response'}
+            # Add file_encoding for YAML files if not specified
+            # This helps HA parse YAML and return dict instead of raw string
+            if 'file_encoding' not in data:
+                file_name = data.get('file_name', '')
+                if file_name.endswith('.yaml') or file_name.endswith('.yml'):
+                    data['file_encoding'] = 'YAML'
+                elif file_name.endswith('.json'):
+                    data['file_encoding'] = 'JSON'
         
         result = await ha_client.call_service(domain, service, data)
         logger.info(f"Service called: {domain}.{service}")
