@@ -54,7 +54,8 @@ https://github.com/user-attachments/assets/0df48019-06c0-48dd-82ad-c7fe0734ddb3
 **Result:** Describe your goal → AI analyzes your setup → Creates custom solution → Deploys automatically! 🚀
 
 
-**How is this different from other MCP modules for Home Assistant?**
+
+### How is this different from other MCP modules for Home Assistant?
 
 Most MCP integrations I’ve seen for Cursor, VS Code or Claude work only on your local machine and talk to Home Assistant over SSH and sometimes the REST API.
 
