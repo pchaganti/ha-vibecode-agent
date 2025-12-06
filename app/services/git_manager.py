@@ -5,6 +5,9 @@ from pathlib import Path
 from datetime import datetime
 from typing import List, Dict, Optional
 import logging
+import tempfile
+import shutil
+import subprocess
 
 logger = logging.getLogger('ha_cursor_agent')
 
@@ -430,23 +433,74 @@ secrets.yaml
                     logger.warning(f"git filter-repo failed: {filter_repo_error}. Falling back to orphan branch method.")
                     # Continue with fallback method below
             
-            # Fallback: Use orphan branch + cherry-pick method
-            logger.info("Using orphan branch method for cleanup (fallback)")
-            
-            # Get the commits we want to keep (last 30)
-            commits_to_keep = list(self.repo.iter_commits(max_count=commits_to_keep_count))
-            if not commits_to_keep:
-                return
-            
-            # Verify we got the right number of commits
-            if len(commits_to_keep) != commits_to_keep_count:
-                logger.warning(f"Expected {commits_to_keep_count} commits to keep, but got {len(commits_to_keep)}. Using what we have.")
-            
-            logger.info(f"Keeping {len(commits_to_keep)} commits: from {commits_to_keep[-1].hexsha[:8]} (oldest) to {commits_to_keep[0].hexsha[:8]} (newest)")
+            # Fallback: Try format-patch + git am method (more reliable than orphan branch)
+            logger.info("Using format-patch + git am method for cleanup (fallback)")
             
             try:
-                # Save current branch name
+                # Ensure all current changes are committed before cleanup
+                if self.repo.is_dirty(untracked_files=True):
+                    await self.commit_changes("Pre-cleanup commit: save current state")
+                
+                # Save current branch name and working directory
                 current_branch = self.repo.active_branch.name
+                repo_path = self.repo.working_dir
+                
+                import tempfile
+                import shutil
+                import subprocess
+                
+                # Create temporary directory for patch file
+                with tempfile.TemporaryDirectory() as tmpdir:
+                    patch_file = os.path.join(tmpdir, 'last_commits.patch')
+                    
+                    # Generate patches for last N commits
+                    logger.info(f"Generating patches for last {commits_to_keep_count} commits...")
+                    patch_output = self.repo.git.format_patch(f'-{commits_to_keep_count}', '--stdout')
+                    
+                    # Write patch to file
+                    with open(patch_file, 'w', encoding='utf-8') as f:
+                        f.write(patch_output)
+                    
+                    # Create temporary new repository
+                    new_repo_path = os.path.join(tmpdir, 'new_repo')
+                    os.makedirs(new_repo_path, exist_ok=True)
+                    
+                    # Initialize new repository
+                    subprocess.run(['git', 'init'], cwd=new_repo_path, check=True, capture_output=True)
+                    
+                    # Apply patches to new repository
+                    logger.info(f"Applying patches to new repository...")
+                    result = subprocess.run(
+                        ['git', 'am', patch_file],
+                        cwd=new_repo_path,
+                        capture_output=True,
+                        text=True
+                    )
+                    
+                    if result.returncode != 0:
+                        raise Exception(f"git am failed: {result.stderr}")
+                    
+                    # Copy .git directory from new repo to original (backup original first)
+                    original_git_backup = os.path.join(tmpdir, 'original_git_backup')
+                    shutil.copytree(os.path.join(repo_path, '.git'), original_git_backup)
+                    
+                    # Replace .git directory
+                    shutil.rmtree(os.path.join(repo_path, '.git'))
+                    shutil.copytree(os.path.join(new_repo_path, '.git'), os.path.join(repo_path, '.git'))
+                    
+                    # Reload repository object
+                    from git import Repo
+                    self.repo = Repo(repo_path)
+                    
+                    # Verify the result
+                    rev_list_output = self.repo.git.rev_list('--count', '--no-merges', current_branch)
+                    commits_after = int(rev_list_output.strip())
+                    logger.info(f"✅ Cleanup complete using format-patch method: {total_commits} → {commits_after} commits. Removed {total_commits - commits_after} old commits.")
+                    
+            except Exception as format_patch_error:
+                logger.warning(f"format-patch method failed: {format_patch_error}. Falling back to orphan branch method.")
+                # Fallback to orphan branch method
+                await self._cleanup_using_orphan_branch(total_commits, commits_to_keep_count, current_branch)
                 
                 # Ensure all current changes are committed before cleanup
                 if self.repo.is_dirty(untracked_files=True):
@@ -527,6 +581,92 @@ secrets.yaml
                 except:
                     pass
                 # Don't fail the whole operation if cleanup fails - repository is still usable
+    
+    async def _cleanup_using_orphan_branch(self, total_commits: int, commits_to_keep_count: int, current_branch: str):
+        """Fallback cleanup method using orphan branch + cherry-pick"""
+        try:
+            # Get the commits we want to keep (last N)
+            commits_to_keep = list(self.repo.iter_commits(max_count=commits_to_keep_count))
+            if not commits_to_keep:
+                return
+            
+            # Verify we got the right number of commits
+            if len(commits_to_keep) != commits_to_keep_count:
+                logger.warning(f"Expected {commits_to_keep_count} commits to keep, but got {len(commits_to_keep)}. Using what we have.")
+            
+            logger.info(f"Keeping {len(commits_to_keep)} commits: from {commits_to_keep[-1].hexsha[:8]} (oldest) to {commits_to_keep[0].hexsha[:8]} (newest)")
+            
+            # Ensure all current changes are committed before cleanup
+            if self.repo.is_dirty(untracked_files=True):
+                await self.commit_changes("Pre-cleanup commit: save current state")
+            
+            # Get the oldest commit we want to keep (last in list is oldest)
+            oldest_keep_commit = commits_to_keep[-1]
+            
+            # Strategy: Create a new orphan branch and cherry-pick commits we want to keep
+            # Save current HEAD
+            current_head_sha = self.repo.head.commit.hexsha
+            
+            # Create a temporary orphan branch (no parent, clean history)
+            temp_branch = f"temp_cleanup_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+            self.repo.git.checkout('--orphan', temp_branch)
+            
+            # Reset to oldest commit we want to keep (this gives us that commit's tree)
+            self.repo.git.reset('--hard', oldest_keep_commit.hexsha)
+            
+            # Now cherry-pick all commits from oldest+1 to newest (in order)
+            # commits_to_keep is ordered newest to oldest, so we reverse it
+            commits_to_cherry_pick = list(reversed(commits_to_keep[:-1]))  # All except oldest
+            logger.info(f"Cherry-picking {len(commits_to_cherry_pick)} commits (excluding oldest)")
+            
+            cherry_picked_count = 0
+            for commit in commits_to_cherry_pick:
+                try:
+                    # Cherry-pick with --no-commit to avoid creating merge commits
+                    self.repo.git.cherry_pick('--no-commit', commit.hexsha)
+                    # Commit with original message
+                    if self.repo.is_dirty():
+                        self.repo.index.commit(commit.message.strip())
+                        cherry_picked_count += 1
+                except Exception as cp_error:
+                    # If cherry-pick fails, abort and skip this commit
+                    logger.warning(f"Cherry-pick failed for {commit.hexsha[:8]}: {cp_error}")
+                    try:
+                        self.repo.git.cherry_pick('--abort')
+                    except:
+                        pass
+                    # Continue with next commit
+            
+            logger.info(f"Cherry-picked {cherry_picked_count} commits. Total should be: 1 (oldest) + {cherry_picked_count} (cherry-picked) = {1 + cherry_picked_count}")
+            
+            # Replace the original branch with the cleaned branch
+            self.repo.git.branch('-D', current_branch)
+            self.repo.git.branch('-m', current_branch)
+            self.repo.git.checkout(current_branch)
+            
+            # We know exactly how many commits we created
+            commits_after = 1 + cherry_picked_count
+            logger.info(f"Created {commits_after} commits in cleaned branch (1 oldest + {cherry_picked_count} cherry-picked)")
+            
+            # Use simpler gc without aggressive pruning to avoid OOM
+            # This removes dangling objects (old unreachable commits)
+            try:
+                self.repo.git.gc('--prune=now')
+            except Exception as gc_error:
+                # If gc fails, try even simpler approach
+                logger.warning(f"git gc failed: {gc_error}. Trying simpler cleanup...")
+                self.repo.git.prune('--expire=now')
+            
+            logger.info(f"✅ Automatic cleanup complete: {total_commits} → {commits_after} commits. Removed {total_commits - commits_after} old commits.")
+            
+        except Exception as cleanup_error:
+            logger.error(f"Failed to cleanup commits using orphan branch: {cleanup_error}")
+            # Try to restore to original branch if cleanup failed
+            try:
+                self.repo.git.checkout(current_branch)
+            except:
+                pass
+            # Don't fail the whole operation if cleanup fails - repository is still usable
                 
         except Exception as e:
             logger.error(f"Failed to cleanup commits: {e}")
