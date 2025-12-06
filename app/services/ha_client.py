@@ -87,7 +87,8 @@ class HomeAssistantClient:
             if 'return_response' in data:
                 data = {k: v for k, v in data.items() if k != 'return_response'}
             # Home Assistant API requires return_response as query parameter for file.read_file
-            params = {'return_response': True}
+            # Use string 'true' not boolean True to avoid it being sent in body
+            params = {'return_response': 'true'}
         
         return await self._request('POST', endpoint, data, params=params)
     
