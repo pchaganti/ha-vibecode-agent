@@ -260,7 +260,7 @@ secrets.yaml
                                  cwd=self.repo.working_dir, capture_output=True, timeout=10)
                     # Prune unreachable objects (including old commits only in reflog)
                     subprocess.run(['git', 'gc', '--prune=now', '--quiet'], 
-                                 cwd=self.repo.working_dir, capture_output=True, timeout=30)
+                                 cwd=self.repo.working_dir, capture_output=True, timeout=240)
                 except:
                     pass  # If cleanup fails, continue anyway
                 
@@ -411,7 +411,7 @@ secrets.yaml
                                  cwd=self.repo.working_dir, capture_output=True, timeout=10)
                     # Prune unreachable objects (including old commits only in reflog)
                     subprocess.run(['git', 'gc', '--prune=now', '--quiet'], 
-                                 cwd=self.repo.working_dir, capture_output=True, timeout=30)
+                                 cwd=self.repo.working_dir, capture_output=True, timeout=240)
                 except:
                     pass  # If cleanup fails, continue anyway
                 
@@ -571,7 +571,7 @@ secrets.yaml
             try:
                 logger.info("Running final git gc...")
                 subprocess.run(['git', 'gc', '--prune=now', '--quiet'], 
-                             cwd=repo_path, capture_output=True, timeout=30)
+                             cwd=repo_path, capture_output=True, timeout=240)
                 logger.info("Final gc completed")
             except Exception as gc_error:
                 logger.warning(f"Final gc failed: {gc_error}. Continuing.")
@@ -810,7 +810,7 @@ secrets.yaml
                     cwd=str(self.repo.working_dir),
                     capture_output=True,
                     text=True,
-                    timeout=30
+                    timeout=240
                 )
             elif commit1:
                 result = subprocess.run(
@@ -818,7 +818,7 @@ secrets.yaml
                     cwd=str(self.repo.working_dir),
                     capture_output=True,
                     text=True,
-                    timeout=30
+                    timeout=240
                 )
             else:
                 result = subprocess.run(
@@ -826,7 +826,7 @@ secrets.yaml
                     cwd=str(self.repo.working_dir),
                     capture_output=True,
                     text=True,
-                    timeout=30
+                    timeout=240
                 )
             
             if result.returncode != 0:
@@ -884,7 +884,7 @@ secrets.yaml
                         cwd=repo_path,
                         capture_output=True,
                         text=True,
-                        timeout=30
+                        timeout=240
                     )
                     if result.returncode == 0:
                         files = [f.strip() for f in result.stdout.split('\n') if f.strip()]
@@ -895,7 +895,7 @@ secrets.yaml
                                 cwd=repo_path,
                                 capture_output=True,
                                 text=True,
-                                timeout=30
+                                timeout=240
                             )
                             if restore_result.returncode == 0:
                                 restored_files.append(file_path)
@@ -909,7 +909,7 @@ secrets.yaml
                     cwd=repo_path,
                     capture_output=True,
                     text=True,
-                    timeout=60
+                    timeout=240
                 )
                 
                 if result.returncode != 0:

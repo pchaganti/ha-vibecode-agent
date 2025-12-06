@@ -42,9 +42,9 @@ class HomeAssistantClient:
         # For POST requests, aiohttp handles query params correctly via params argument
         # No need to manually append to URL - let aiohttp handle it
         
-        # Use custom timeout or default 30 seconds
-        # Long operations like backup_full need more time
-        timeout_seconds = timeout if timeout is not None else 30
+        # Use custom timeout or default 240 seconds (4 minutes)
+        # Long operations like backup_full, file operations, and Git cleanup need more time
+        timeout_seconds = timeout if timeout is not None else 240
         
         # Debug logging
         token_preview = f"{self.token[:20]}..." if self.token else "EMPTY"
