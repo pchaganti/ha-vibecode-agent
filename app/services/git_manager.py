@@ -248,9 +248,12 @@ secrets.yaml
                 # Use git log to count only commits in current branch
                 # This excludes dangling objects that may still exist after cleanup
                 log_output = self.repo.git.log('--oneline', 'HEAD')
-                commit_count = len([line for line in log_output.strip().split('\n') if line.strip()])
-            except Exception:
+                lines = [line for line in log_output.strip().split('\n') if line.strip()]
+                commit_count = len(lines)
+                logger.debug(f"Commit count via git log: {commit_count} (log output length: {len(log_output)})")
+            except Exception as e:
                 # Fallback: count commits using iter_commits with HEAD
+                logger.warning(f"git log failed, using iter_commits fallback: {e}")
                 commit_count = len(list(self.repo.iter_commits('HEAD', max_count=1000)))
             
             if commit_count >= self.max_backups:
@@ -359,9 +362,12 @@ secrets.yaml
                 # Use git log to count only commits in current branch
                 # This excludes dangling objects that may still exist after cleanup
                 log_output = self.repo.git.log('--oneline', 'HEAD')
-                total_commits = len([line for line in log_output.strip().split('\n') if line.strip()])
-            except Exception:
+                lines = [line for line in log_output.strip().split('\n') if line.strip()]
+                total_commits = len(lines)
+                logger.debug(f"Total commits via git log: {total_commits} (log output length: {len(log_output)})")
+            except Exception as e:
                 # Fallback: count commits using iter_commits with HEAD
+                logger.warning(f"git log failed, using iter_commits fallback: {e}")
                 total_commits = len(list(self.repo.iter_commits('HEAD', max_count=1000)))
             
             # Keep 30 commits when we reach 50 (max_backups)
