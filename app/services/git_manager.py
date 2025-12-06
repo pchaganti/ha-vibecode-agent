@@ -478,19 +478,27 @@ secrets.yaml
                     )
                     
                     if result.returncode != 0:
-                        # If git am fails, try to continue or skip problematic patches
-                        logger.warning(f"git am failed, trying to continue: {result.stderr}")
-                        # Try to abort and use a different approach
-                        subprocess.run(['git', 'am', '--abort'], cwd=new_repo_path, capture_output=True)
+                        # If git am fails, try with --3way to allow 3-way merge for conflicts
+                        logger.warning(f"git am failed, trying with --3way: {result.stderr}")
                         # Use --3way to allow 3-way merge for conflicts
                         result = subprocess.run(
-                            ['git', 'am', '--3way', '--allow-empty', patch_file],
+                            ['git', 'am', '--3way', '--allow-empty', '--ignore-whitespace', patch_file],
                             cwd=new_repo_path,
                             capture_output=True,
                             text=True
                         )
                         if result.returncode != 0:
-                            raise Exception(f"git am failed even with --3way: {result.stderr}")
+                            # If still fails, try to skip problematic patches
+                            logger.warning(f"git am --3way failed, trying to skip: {result.stderr}")
+                            # Try to continue or skip
+                            continue_result = subprocess.run(
+                                ['git', 'am', '--skip'],
+                                cwd=new_repo_path,
+                                capture_output=True,
+                                text=True
+                            )
+                            if continue_result.returncode != 0:
+                                raise Exception(f"git am failed even with --skip: {result.stderr}")
                     
                     # Copy .git directory from new repo to original (backup original first)
                     original_git_backup = os.path.join(tmpdir, 'original_git_backup')
