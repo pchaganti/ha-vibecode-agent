@@ -100,17 +100,17 @@ async def call_service(
     - Set climate temperature: {"domain": "climate", "service": "set_temperature", "target": {"entity_id": "climate.bedroom_trv_thermostat"}, "service_data": {"temperature": 21.0}}
     """
     try:
-        # Some services require return_response as query parameter, not in body
-        # Remove it from service_data if present (e.g., file.read_file)
-        if service_data and domain == 'file' and service == 'read_file':
-            if 'return_response' in service_data:
-                service_data = {k: v for k, v in service_data.items() if k != 'return_response'}
-        
         # Combine service_data and target into data dict
         # In Home Assistant API, target is merged with service_data
         data = {}
         if service_data:
-            data.update(service_data)
+            # Some services require return_response as query parameter, not in body
+            # Remove it from service_data if present (e.g., file.read_file)
+            if domain == 'file' and service == 'read_file' and 'return_response' in service_data:
+                # Create a copy without return_response
+                data.update({k: v for k, v in service_data.items() if k != 'return_response'})
+            else:
+                data.update(service_data)
         if target:
             # Merge target fields into data (e.g., entity_id from target)
             if 'entity_id' in target:
