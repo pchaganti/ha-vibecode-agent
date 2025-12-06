@@ -33,7 +33,8 @@ class HomeAssistantClient:
         method: str,
         endpoint: str,
         data: Optional[Dict] = None,
-        params: Optional[Dict[str, Any]] = None
+        params: Optional[Dict[str, Any]] = None,
+        timeout: Optional[int] = None
     ) -> Dict:
         """Make HTTP request to HA API"""
         url = f"{self.url}/api/{endpoint}"
@@ -47,9 +48,13 @@ class HomeAssistantClient:
                 url = f"{url}?{query_string}"
                 params = None  # Clear params to avoid double encoding
         
+        # Use custom timeout or default 30 seconds
+        # Long operations like backup_full need more time
+        timeout_seconds = timeout if timeout is not None else 30
+        
         # Debug logging
         token_preview = f"{self.token[:20]}..." if self.token else "EMPTY"
-        logger.debug(f"HA API Request: {method} {url}, Token: {token_preview}")
+        logger.debug(f"HA API Request: {method} {url}, Token: {token_preview}, Timeout: {timeout_seconds}s")
         
         try:
             async with aiohttp.ClientSession() as session:
@@ -59,7 +64,7 @@ class HomeAssistantClient:
                     headers=self.headers,
                     json=data,
                     params=params,
-                    timeout=aiohttp.ClientTimeout(total=30)
+                    timeout=aiohttp.ClientTimeout(total=timeout_seconds)
                 ) as response:
                     if response.status >= 400:
                         text = await response.text()
@@ -91,6 +96,8 @@ class HomeAssistantClient:
         # Some services require return_response as query parameter (e.g., file.read_file)
         # Remove return_response from data if present (it should be a query param, not in body)
         params = None
+        timeout = None
+        
         if domain == 'file' and service == 'read_file':
             # Remove return_response from data dict if it's there (should be query param)
             if 'return_response' in data:
@@ -98,8 +105,11 @@ class HomeAssistantClient:
             # Home Assistant API requires return_response as query parameter for file.read_file
             # Use string 'true' not boolean True to avoid it being sent in body
             params = {'return_response': 'true'}
+        elif domain == 'hassio' and service in ['backup_full', 'backup_partial', 'restore_full', 'restore_partial']:
+            # Long-running operations need more time
+            timeout = 300  # 5 minutes for backup/restore operations
         
-        return await self._request('POST', endpoint, data, params=params)
+        return await self._request('POST', endpoint, data, params=params, timeout=timeout)
     
     async def get_config(self) -> Dict:
         """Get HA configuration"""
