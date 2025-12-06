@@ -21,7 +21,6 @@ class GitManager:
         self.max_backups = int(os.getenv('MAX_BACKUPS', '50'))
         self.repo = None
         self.processing_request = False  # Flag to disable auto-commits during request processing
-        self.last_known_commit_count = None  # Track last known commit count after cleanup
         
         if self.enabled:
             self._init_repo()
@@ -388,15 +387,23 @@ secrets.yaml
             try:
                 # Get current branch name
                 current_branch = self.repo.active_branch.name
-                # Use git log to count only commits in current branch
-                # This is more reliable than rev-list which may count dangling objects
-                log_output = self.repo.git.log('--oneline', current_branch)
-                total_commits = len([line for line in log_output.strip().split('\n') if line.strip()])
-                logger.info(f"Total commits via git log ({current_branch}): {total_commits}")
+                # Use git rev-list to count only commits reachable from HEAD
+                # This is more reliable - it counts only commits in the current branch history
+                # Use --first-parent to follow only the main branch (not merge commits)
+                rev_list_output = self.repo.git.rev_list('--count', '--first-parent', 'HEAD')
+                total_commits = int(rev_list_output.strip())
+                logger.info(f"Total commits via rev-list --first-parent HEAD ({current_branch}): {total_commits}")
             except Exception as e:
-                # Fallback: count commits using iter_commits with HEAD
-                logger.warning(f"git log failed, using iter_commits fallback: {e}")
-                total_commits = len(list(self.repo.iter_commits('HEAD', max_count=1000)))
+                # Fallback: use git log with explicit HEAD reference
+                logger.warning(f"git rev-list failed, using git log fallback: {e}")
+                try:
+                    log_output = self.repo.git.log('--oneline', '--first-parent', 'HEAD', '--max-count=100')
+                    total_commits = len([line for line in log_output.strip().split('\n') if line.strip()])
+                    logger.info(f"Total commits via git log --first-parent HEAD: {total_commits}")
+                except Exception as e2:
+                    # Last fallback: count commits using iter_commits with HEAD
+                    logger.warning(f"git log failed, using iter_commits fallback: {e2}")
+                    total_commits = len(list(self.repo.iter_commits('HEAD', max_count=1000)))
             
             # Keep 30 commits when we reach 50 (max_backups)
             commits_to_keep_count = 30
@@ -524,9 +531,6 @@ secrets.yaml
                     rev_list_output = self.repo.git.rev_list('--count', '--no-merges', current_branch)
                     commits_after = int(rev_list_output.strip())
                     logger.info(f"✅ Cleanup complete using format-patch method: {total_commits} → {commits_after} commits. Removed {total_commits - commits_after} old commits.")
-                    
-                    # Update last known commit count after cleanup
-                    self.last_known_commit_count = commits_after
                     return
                     
             except Exception as format_patch_error:
@@ -644,10 +648,6 @@ secrets.yaml
                 logger.warning(f"Commit count mismatch: expected {commits_after}, git log shows {commits_after_verify}. Using expected count.")
             
             logger.info(f"✅ Automatic cleanup complete: {total_commits} → {commits_after} commits. Removed {total_commits - commits_after} old commits.")
-            
-            # Update last known commit count after cleanup
-            # This ensures next commit will correctly count from this baseline
-            self.last_known_commit_count = commits_after
             
         except Exception as cleanup_error:
             logger.error(f"Failed to cleanup commits using orphan branch: {cleanup_error}")
