@@ -508,12 +508,14 @@ secrets.yaml
                 logger.info(f"Cloning repository with depth={commits_to_keep_count}...")
                 
                 # Clone the repository with specified depth
-                # Use absolute path for local clone (git clone supports local paths)
+                # Use file:// protocol for local clone to avoid hard links
                 # --depth creates a shallow clone with only last N commits
+                # --single-branch clones only the current branch
+                repo_url = f'file://{repo_path}'
                 result = subprocess.run(
                     ['git', 'clone', '--depth', str(commits_to_keep_count), 
                      '--branch', current_branch, '--single-branch',
-                     '--no-local', repo_path, clone_path],
+                     repo_url, clone_path],
                     capture_output=True,
                     text=True,
                     timeout=300
