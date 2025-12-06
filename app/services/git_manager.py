@@ -241,17 +241,11 @@ secrets.yaml
             
             logger.info(f"Committed changes: {commit_hash} - {message}")
             
-            # Cleanup old commits if needed (run in background to avoid blocking)
-            # Only cleanup if we're significantly over the limit (e.g., 2x max_backups)
-            # This prevents cleanup from running on every commit
+            # Cleanup old commits if needed
+            # When we reach max_backups (50), we keep only 30 commits and continue
             commits = list(self.repo.iter_commits())
-            if len(commits) > self.max_backups * 2:
-                # Schedule cleanup in background (don't await to avoid blocking)
-                import asyncio
-                asyncio.create_task(self._cleanup_old_commits())
-                logger.debug("Scheduled cleanup in background (non-blocking)")
-            elif len(commits) > self.max_backups:
-                # If just slightly over limit, cleanup synchronously but less aggressively
+            if len(commits) >= self.max_backups:
+                # At max_backups, cleanup to keep only 30 commits
                 await self._cleanup_old_commits()
             
             return commit_hash
@@ -339,27 +333,31 @@ secrets.yaml
         logger.debug("Request processing ended - auto-commits re-enabled")
     
     async def _cleanup_old_commits(self):
-        """Remove old commits to save space - keeps only last max_backups commits
+        """Remove old commits to save space - keeps only 30 commits when reaching 50
         
-        This is called automatically when commits exceed 2x max_backups.
+        This is called automatically when commits reach max_backups (50).
+        We keep only 30 commits to have buffer before next cleanup.
         For manual cleanup with backup branch deletion, use cleanup_commits().
         
         This method safely removes old commits while preserving:
         - All current files on disk (unchanged)
-        - Last max_backups commits (history)
-        - Ability to rollback to any of the last max_backups versions
+        - Last 30 commits (history)
+        - Ability to rollback to any of the last 30 versions
         """
         try:
             commits = list(self.repo.iter_commits())
             total_commits = len(commits)
             
-            if total_commits <= self.max_backups:
-                return  # No cleanup needed
+            # Keep 30 commits when we reach 50 (max_backups)
+            commits_to_keep_count = 30
             
-            logger.info(f"Repository has {total_commits} commits, max is {self.max_backups}. Starting automatic cleanup...")
+            if total_commits < self.max_backups:
+                return  # No cleanup needed yet
             
-            # Get the commits we want to keep (last max_backups)
-            commits_to_keep = list(self.repo.iter_commits(max_count=self.max_backups))
+            logger.info(f"Repository has {total_commits} commits, reached max ({self.max_backups}). Starting automatic cleanup to keep {commits_to_keep_count} commits...")
+            
+            # Get the commits we want to keep (last 30)
+            commits_to_keep = list(self.repo.iter_commits(max_count=commits_to_keep_count))
             if not commits_to_keep:
                 return
             
