@@ -588,6 +588,31 @@ secrets.yaml
                 # Fallback: use expected count
                 commits_after_verify = commits_after
             
+            # After cleanup, expire reflog and prune unreachable objects to fully remove old commits
+            try:
+                import subprocess
+                # Expire all reflog entries (old commits may still be reachable via reflog)
+                subprocess.run(['git', 'reflog', 'expire', '--expire=now', '--all'], 
+                             cwd=self.repo.working_dir, capture_output=True, timeout=10)
+                # Prune unreachable objects (including old commits only in reflog)
+                subprocess.run(['git', 'gc', '--prune=now', '--quiet'], 
+                             cwd=self.repo.working_dir, capture_output=True, timeout=30)
+                logger.info("Cleaned up reflog and pruned unreachable objects after cleanup")
+            except Exception as gc_error:
+                logger.warning(f"Post-cleanup gc failed: {gc_error}. Continuing.")
+            
+            # Reload repository after gc to get fresh state
+            repo_path = self.repo.working_dir
+            from git import Repo
+            self.repo = Repo(repo_path)
+            
+            # Verify count again after gc
+            try:
+                log_output = self.repo.git.log('--oneline', 'HEAD', f'--max-count={commits_after + 10}')
+                commits_after_verify = len([line for line in log_output.strip().split('\n') if line.strip()])
+            except:
+                commits_after_verify = commits_after
+            
             # Use expected count (we know we created exactly this many commits)
             # git log may still see old commits if they're not fully pruned, but we know the actual count
             if commits_after_verify != commits_after:
