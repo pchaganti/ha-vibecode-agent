@@ -373,36 +373,45 @@ secrets.yaml
                 
                 # Get the oldest commit we want to keep (last in list is oldest)
                 oldest_keep_commit = commits_to_keep[-1]
+                newest_keep_commit = commits_to_keep[0]  # HEAD
                 
-                # Strategy: Use git rebase --onto to rewrite history
-                # We want to keep commits from oldest_keep_commit to HEAD (exactly max_backups commits)
-                # So we rebase everything onto oldest_keep_commit, removing older commits
+                # Strategy: Create a new orphan branch and cherry-pick commits we want to keep
+                # This is simpler and more reliable than rebase --onto
                 
-                # Find the parent of oldest_keep_commit (the commit we want to remove)
-                parent_commit = oldest_keep_commit.parents[0] if oldest_keep_commit.parents else None
+                # Save current HEAD
+                current_head_sha = self.repo.head.commit.hexsha
                 
-                if parent_commit:
+                # Create a temporary orphan branch (no parent, clean history)
+                temp_branch = f"temp_cleanup_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+                self.repo.git.checkout('--orphan', temp_branch)
+                
+                # Reset to oldest commit we want to keep (this gives us that commit's tree)
+                self.repo.git.reset('--hard', oldest_keep_commit.hexsha)
+                
+                # Now cherry-pick all commits from oldest+1 to newest (in order)
+                # commits_to_keep is ordered newest to oldest, so we reverse it
+                commits_to_cherry_pick = list(reversed(commits_to_keep[:-1]))  # All except oldest
+                
+                for commit in commits_to_cherry_pick:
                     try:
-                        # Use rebase --onto: rebase commits from parent_commit to HEAD onto oldest_keep_commit
-                        # This keeps all commits from oldest_keep_commit to HEAD, removing older ones
-                        # The syntax is: git rebase --onto <newbase> <upstream> <branch>
-                        # This means: take commits from <upstream> to <branch> and rebase them onto <newbase>
-                        # In our case: take commits from parent_commit to HEAD and rebase onto oldest_keep_commit
-                        self.repo.git.rebase('--onto', oldest_keep_commit.hexsha, parent_commit.hexsha, current_branch)
-                    except Exception as rebase_error:
-                        # If rebase fails (e.g., conflicts), abort and skip cleanup
-                        logger.warning(f"Rebase failed: {rebase_error}. Aborting cleanup to avoid data loss.")
+                        # Cherry-pick with --no-commit to avoid creating merge commits
+                        self.repo.git.cherry_pick('--no-commit', commit.hexsha)
+                        # Commit with original message
+                        if self.repo.is_dirty():
+                            self.repo.index.commit(commit.message.strip())
+                    except Exception as cp_error:
+                        # If cherry-pick fails, abort and skip this commit
+                        logger.warning(f"Cherry-pick failed for {commit.hexsha[:8]}: {cp_error}")
                         try:
-                            self.repo.git.rebase('--abort')
+                            self.repo.git.cherry_pick('--abort')
                         except:
                             pass
-                        # Don't proceed with cleanup if rebase fails - better to keep all commits than lose data
-                        logger.error("Cleanup aborted - rebase failed. Repository unchanged.")
-                        return
-                else:
-                    # Oldest commit has no parent (root commit), can't use rebase
-                    logger.warning("Oldest commit is root commit, skipping cleanup")
-                    return
+                        # Continue with next commit
+                
+                # Replace the original branch with the cleaned branch
+                self.repo.git.branch('-D', current_branch)
+                self.repo.git.branch('-m', current_branch)
+                self.repo.git.checkout(current_branch)
                 
                 # Use simpler gc without aggressive pruning to avoid OOM
                 try:
@@ -486,38 +495,45 @@ secrets.yaml
             
             # Get the oldest commit we want to keep (last in list is oldest)
             oldest_keep_commit = commits_to_keep[-1]
+            newest_keep_commit = commits_to_keep[0]  # HEAD
             
-            # Strategy: Use git rebase --onto to rewrite history
-            # We want to keep commits from oldest_keep_commit to HEAD (exactly max_backups commits)
-            parent_commit = oldest_keep_commit.parents[0] if oldest_keep_commit.parents else None
+            # Strategy: Create a new orphan branch and cherry-pick commits we want to keep
+            # This is simpler and more reliable than rebase --onto
             
-            if parent_commit:
+            # Save current HEAD
+            current_head_sha = self.repo.head.commit.hexsha
+            
+            # Create a temporary orphan branch (no parent, clean history)
+            temp_branch = f"temp_cleanup_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+            self.repo.git.checkout('--orphan', temp_branch)
+            
+            # Reset to oldest commit we want to keep (this gives us that commit's tree)
+            self.repo.git.reset('--hard', oldest_keep_commit.hexsha)
+            
+            # Now cherry-pick all commits from oldest+1 to newest (in order)
+            # commits_to_keep is ordered newest to oldest, so we reverse it
+            commits_to_cherry_pick = list(reversed(commits_to_keep[:-1]))  # All except oldest
+            
+            for commit in commits_to_cherry_pick:
                 try:
-                    # Use rebase --onto: rebase commits from parent_commit to HEAD onto oldest_keep_commit
-                    self.repo.git.rebase('--onto', oldest_keep_commit.hexsha, parent_commit.hexsha, current_branch)
-                except Exception as rebase_error:
-                    logger.warning(f"Rebase failed: {rebase_error}. Aborting cleanup.")
+                    # Cherry-pick with --no-commit to avoid creating merge commits
+                    self.repo.git.cherry_pick('--no-commit', commit.hexsha)
+                    # Commit with original message
+                    if self.repo.is_dirty():
+                        self.repo.index.commit(commit.message.strip())
+                except Exception as cp_error:
+                    # If cherry-pick fails, abort and skip this commit
+                    logger.warning(f"Cherry-pick failed for {commit.hexsha[:8]}: {cp_error}")
                     try:
-                        self.repo.git.rebase('--abort')
+                        self.repo.git.cherry_pick('--abort')
                     except:
                         pass
-                    # Don't proceed with cleanup if rebase fails
-                    return {
-                        "success": False,
-                        "message": f"Cleanup failed: {rebase_error}",
-                        "commits_before": total_commits,
-                        "commits_after": total_commits,
-                        "backup_branches_deleted": 0
-                    }
-            else:
-                logger.warning("Oldest commit is root commit, skipping rebase")
-                return {
-                    "success": False,
-                    "message": "Oldest commit is root commit, cannot cleanup",
-                    "commits_before": total_commits,
-                    "commits_after": total_commits,
-                    "backup_branches_deleted": 0
-                }
+                    # Continue with next commit
+            
+            # Replace the original branch with the cleaned branch
+            self.repo.git.branch('-D', current_branch)
+            self.repo.git.branch('-m', current_branch)
+            self.repo.git.checkout(current_branch)
             
             # Clean up backup branches if requested
             deleted_branches = 0
