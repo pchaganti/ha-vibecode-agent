@@ -241,8 +241,18 @@ secrets.yaml
             
             logger.info(f"Committed changes: {commit_hash} - {message}")
             
-            # Cleanup old commits if needed
-            await self._cleanup_old_commits()
+            # Cleanup old commits if needed (run in background to avoid blocking)
+            # Only cleanup if we're significantly over the limit (e.g., 2x max_backups)
+            # This prevents cleanup from running on every commit
+            commits = list(self.repo.iter_commits())
+            if len(commits) > self.max_backups * 2:
+                # Schedule cleanup in background (don't await to avoid blocking)
+                import asyncio
+                asyncio.create_task(self._cleanup_old_commits())
+                logger.debug("Scheduled cleanup in background (non-blocking)")
+            elif len(commits) > self.max_backups:
+                # If just slightly over limit, cleanup synchronously but less aggressively
+                await self._cleanup_old_commits()
             
             return commit_hash
         except Exception as e:
@@ -380,7 +390,9 @@ secrets.yaml
                 
                 # Force garbage collection to actually remove old objects from disk
                 # This is what actually frees up space
-                self.repo.git.gc('--prune=now', '--aggressive')
+                # Use --prune=now without --aggressive to reduce CPU/memory usage
+                # --aggressive can be very resource-intensive with many commits
+                self.repo.git.gc('--prune=now')
                 
                 commits_after = len(list(self.repo.iter_commits()))
                 logger.info(f"✅ Cleanup complete: {total_commits} → {commits_after} commits. Removed {total_commits - commits_after} old commits.")
