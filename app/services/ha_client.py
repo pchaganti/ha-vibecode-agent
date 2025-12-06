@@ -54,7 +54,7 @@ class HomeAssistantClient:
         
         # Debug logging
         token_preview = f"{self.token[:20]}..." if self.token else "EMPTY"
-        logger.debug(f"HA API Request: {method} {url}, Token: {token_preview}, Timeout: {timeout_seconds}s")
+        logger.info(f"HA API Request: {method} {url}, Data: {data}, Params: {params}, Timeout: {timeout_seconds}s")
         
         try:
             async with aiohttp.ClientSession() as session:
@@ -68,7 +68,7 @@ class HomeAssistantClient:
                 ) as response:
                     if response.status >= 400:
                         text = await response.text()
-                        logger.error(f"HA API error: {response.status} - {text} | Token used: {token_preview}")
+                        logger.error(f"HA API error: {response.status} - {text} | URL: {url} | Data: {data} | Params: {params} | Token used: {token_preview}")
                         raise Exception(f"HA API error: {response.status} - {text}")
                     
                     logger.debug(f"HA API success: {method} {url} -> {response.status}")
