@@ -19,6 +19,7 @@ class GitManager:
         self.enabled = os.getenv('ENABLE_GIT', 'false').lower() == 'true'
         self.auto_backup = os.getenv('AUTO_BACKUP', 'true').lower() == 'true'
         self.max_backups = int(os.getenv('MAX_BACKUPS', '30'))
+        logger.info(f"GitManager initialized: max_backups={self.max_backups}, enabled={self.enabled}")
         self.repo = None
         self.processing_request = False  # Flag to disable auto-commits during request processing
         
@@ -270,9 +271,13 @@ secrets.yaml
                     logger.warning(f"git log failed, using iter_commits fallback: {e2}")
                     commit_count = len(list(self.repo.iter_commits('HEAD', max_count=1000)))
             
+            logger.debug(f"Checking if cleanup needed: commit_count={commit_count}, max_backups={self.max_backups}")
             if commit_count >= self.max_backups:
+                logger.info(f"⚠️ Cleanup triggered: commit_count ({commit_count}) >= max_backups ({self.max_backups})")
                 # At max_backups (30), cleanup to keep only 20 commits
                 await self._cleanup_old_commits()
+            else:
+                logger.debug(f"No cleanup needed: commit_count ({commit_count}) < max_backups ({self.max_backups})")
                 
                 # After cleanup, reload repository to ensure we have correct state
                 # This is critical because cleanup replaces .git directory
