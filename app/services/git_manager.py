@@ -276,8 +276,6 @@ secrets.yaml
                 logger.info(f"⚠️ Cleanup triggered: commit_count ({commit_count}) >= max_backups ({self.max_backups})")
                 # At max_backups (30), cleanup to keep only 20 commits
                 await self._cleanup_old_commits()
-            else:
-                logger.debug(f"No cleanup needed: commit_count ({commit_count}) < max_backups ({self.max_backups})")
                 
                 # After cleanup, reload repository to ensure we have correct state
                 # This is critical because cleanup replaces .git directory
@@ -289,6 +287,8 @@ secrets.yaml
                     logger.info(f"After cleanup: Repository now has {new_count} commits (was {commit_count})")
                 except Exception as reload_error:
                     logger.warning(f"Failed to reload repository after cleanup: {reload_error}")
+            else:
+                logger.debug(f"No cleanup needed: commit_count ({commit_count}) < max_backups ({self.max_backups})")
             
             return commit_hash
         except Exception as e:
