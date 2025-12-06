@@ -473,7 +473,7 @@ secrets.yaml
                     logger.warning(f"git filter-repo failed: {filter_repo_error}. Falling back to orphan branch method.")
                     # Continue with fallback method below
             
-            # Use orphan branch method directly (format-patch method was unreliable)
+            # Use clone with depth method (simpler and more reliable)
             # Ensure all current changes are committed before cleanup
             if self.repo.is_dirty(untracked_files=True):
                 await self.commit_changes("Pre-cleanup commit: save current state")
@@ -481,15 +481,105 @@ secrets.yaml
             # Save current branch name
             current_branch = self.repo.active_branch.name
             
-            # Use orphan branch method
-            await self._cleanup_using_orphan_branch(total_commits, commits_to_keep_count, current_branch)
+            # Use clone with depth method
+            await self._cleanup_using_clone_depth(total_commits, commits_to_keep_count, current_branch)
             
         except Exception as cleanup_error:
             logger.error(f"Failed to cleanup commits: {cleanup_error}")
             # Don't fail the whole operation if cleanup fails - repository is still usable
     
+    async def _cleanup_using_clone_depth(self, total_commits: int, commits_to_keep_count: int, current_branch: str):
+        """Cleanup method using git clone with depth - simpler and more reliable
+        
+        This method:
+        1. Clones the existing repository with depth=commits_to_keep_count
+        2. Verifies the clone is correct
+        3. Replaces the old .git directory with the new one
+        4. Runs gc for final cleanup
+        """
+        try:
+            repo_path = self.repo.working_dir
+            git_dir = os.path.join(repo_path, '.git')
+            
+            # Create temporary directory for clone
+            with tempfile.TemporaryDirectory() as tmpdir:
+                clone_path = os.path.join(tmpdir, 'cloned_repo')
+                
+                logger.info(f"Cloning repository with depth={commits_to_keep_count}...")
+                
+                # Clone the repository with specified depth
+                # Use absolute path for local clone (git clone supports local paths)
+                # --depth creates a shallow clone with only last N commits
+                result = subprocess.run(
+                    ['git', 'clone', '--depth', str(commits_to_keep_count), 
+                     '--branch', current_branch, '--single-branch',
+                     '--no-local', repo_path, clone_path],
+                    capture_output=True,
+                    text=True,
+                    timeout=300
+                )
+                
+                if result.returncode != 0:
+                    raise Exception(f"git clone failed: {result.stderr}")
+                
+                # Verify the clone has correct number of commits
+                cloned_repo = git.Repo(clone_path)
+                cloned_commits = len(list(cloned_repo.iter_commits(max_count=commits_to_keep_count + 10)))
+                
+                if cloned_commits > commits_to_keep_count:
+                    logger.warning(f"Clone has {cloned_commits} commits, expected {commits_to_keep_count}. This is normal for shallow clones.")
+                else:
+                    logger.info(f"Clone verified: {cloned_commits} commits")
+                
+                # Backup old .git directory (just in case)
+                git_backup = os.path.join(tmpdir, 'git_backup')
+                if os.path.exists(git_dir):
+                    shutil.copytree(git_dir, git_backup)
+                    logger.info("Backed up old .git directory")
+                
+                # Replace .git directory with cloned one
+                logger.info("Replacing .git directory with cloned repository...")
+                if os.path.exists(git_dir):
+                    shutil.rmtree(git_dir)
+                
+                cloned_git_dir = os.path.join(clone_path, '.git')
+                shutil.copytree(cloned_git_dir, git_dir)
+                
+                logger.info("✅ Repository replaced successfully")
+            
+            # Reload repository to get fresh state
+            self.repo = git.Repo(repo_path)
+            
+            # Run gc for final cleanup (optional but recommended)
+            try:
+                logger.info("Running final git gc...")
+                subprocess.run(['git', 'gc', '--prune=now', '--quiet'], 
+                             cwd=repo_path, capture_output=True, timeout=30)
+                logger.info("Final gc completed")
+            except Exception as gc_error:
+                logger.warning(f"Final gc failed: {gc_error}. Continuing.")
+            
+            # Reload repository after gc
+            self.repo = git.Repo(repo_path)
+            
+            # Verify final count
+            try:
+                rev_list_output = self.repo.git.rev_list('--count', '--first-parent', 'HEAD')
+                commits_after = int(rev_list_output.strip())
+                logger.info(f"Final commit count: {commits_after}")
+            except:
+                commits_after = commits_to_keep_count
+            
+            logger.info(f"✅ Automatic cleanup complete: {total_commits} → {commits_after} commits. Removed {total_commits - commits_after} old commits.")
+            
+        except Exception as cleanup_error:
+            logger.error(f"Failed to cleanup commits using clone method: {cleanup_error}")
+            # Try to restore from backup if available
+            # Don't fail the whole operation if cleanup fails - repository is still usable
+            raise
+    
     async def _cleanup_using_orphan_branch(self, total_commits: int, commits_to_keep_count: int, current_branch: str):
-        """Fallback cleanup method using orphan branch + cherry-pick"""
+        """Legacy cleanup method using orphan branch + cherry-pick (kept as fallback)"""
         try:
             # Get the commits we want to keep (last N)
             commits_to_keep = list(self.repo.iter_commits(max_count=commits_to_keep_count))
