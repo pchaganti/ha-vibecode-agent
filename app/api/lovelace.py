@@ -166,13 +166,13 @@ async def _register_dashboard(filename: str, title: str, icon: str) -> bool:
         
         logger.info(f"Dashboard '{dashboard_key}' registered in configuration.yaml")
         
-        # Restart Home Assistant to apply configuration changes
+        # Reload core config to apply dashboard registration (safer than full restart)
         try:
-            logger.info("Restarting Home Assistant to apply dashboard registration...")
-            await ha_client.restart()
-            logger.info("Home Assistant restart initiated")
-        except Exception as restart_error:
-            logger.warning(f"Dashboard registered but restart failed (manual restart needed): {restart_error}")
+            logger.info("Reloading core configuration to apply dashboard registration...")
+            await ha_client.reload_component('core')
+            logger.info("Core configuration reloaded")
+        except Exception as reload_error:
+            logger.warning(f"Dashboard registered but config reload failed (may need manual restart): {reload_error}")
         
         return True
         
@@ -457,14 +457,14 @@ async def delete_dashboard(filename: str, remove_from_config: bool = True, creat
                 skip_if_processing=True
             )
         
-        # Restart HA if config was modified
+        # Reload core config if config was modified (safer than full restart)
         if dashboard_removed:
             try:
-                logger.info("Restarting Home Assistant to apply configuration changes...")
-                await ha_client.restart()
-                logger.info("Home Assistant restart initiated")
-            except Exception as restart_error:
-                logger.warning(f"Dashboard deleted but restart failed: {restart_error}")
+                logger.info("Reloading core configuration to apply dashboard removal...")
+                await ha_client.reload_component('core')
+                logger.info("Core configuration reloaded")
+            except Exception as reload_error:
+                logger.warning(f"Dashboard deleted but config reload failed (may need manual restart): {reload_error}")
         
         return Response(
             success=True,

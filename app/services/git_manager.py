@@ -541,10 +541,25 @@ secrets.yaml
                 
                 # Replace .git directory with cloned one
                 logger.info("Replacing .git directory with cloned repository...")
+                
+                # CRITICAL: Verify clone has working tree files before replacing .git
+                # This ensures we don't lose uncommitted files
+                cloned_git_dir = os.path.join(clone_path, '.git')
+                if not os.path.exists(cloned_git_dir):
+                    raise Exception("Cloned .git directory does not exist - aborting cleanup to prevent data loss")
+                
+                # Verify clone is valid before replacing
+                try:
+                    test_repo = git.Repo(clone_path)
+                    if not test_repo.heads:
+                        raise Exception("Cloned repository has no branches - aborting cleanup")
+                except Exception as verify_error:
+                    raise Exception(f"Cloned repository verification failed: {verify_error} - aborting cleanup to prevent data loss")
+                
+                # Now safe to replace .git directory
                 if os.path.exists(git_dir):
                     shutil.rmtree(git_dir)
                 
-                cloned_git_dir = os.path.join(clone_path, '.git')
                 shutil.copytree(cloned_git_dir, git_dir)
                 
                 logger.info("✅ Repository replaced successfully")
@@ -788,17 +803,148 @@ secrets.yaml
             return ""
         
         try:
+            # Use subprocess with explicit working directory to avoid "Unable to read current working directory" errors
             if commit1 and commit2:
-                diff = self.repo.git.diff(commit1, commit2)
+                result = subprocess.run(
+                    ['git', 'diff', commit1, commit2],
+                    cwd=str(self.repo.working_dir),
+                    capture_output=True,
+                    text=True,
+                    timeout=30
+                )
             elif commit1:
-                diff = self.repo.git.diff(commit1, 'HEAD')
+                result = subprocess.run(
+                    ['git', 'diff', commit1, 'HEAD'],
+                    cwd=str(self.repo.working_dir),
+                    capture_output=True,
+                    text=True,
+                    timeout=30
+                )
             else:
-                diff = self.repo.git.diff('HEAD')
+                result = subprocess.run(
+                    ['git', 'diff', 'HEAD'],
+                    cwd=str(self.repo.working_dir),
+                    capture_output=True,
+                    text=True,
+                    timeout=30
+                )
             
-            return diff
+            if result.returncode != 0:
+                logger.warning(f"git diff returned non-zero exit code: {result.stderr}")
+                return ""
+            
+            return result.stdout
         except Exception as e:
             logger.error(f"Failed to get diff: {e}")
             return ""
+    
+    async def restore_files_from_commit(self, commit_hash: str = None, file_patterns: List[str] = None) -> Dict:
+        """Restore files from a specific commit using subprocess (bypasses GitPython issues)
+        
+        Args:
+            commit_hash: Commit hash to restore from (default: HEAD)
+            file_patterns: List of file patterns to restore (e.g., ['*.yaml', 'configuration.yaml'])
+                          If None, restores all tracked files
+        
+        Returns:
+            Dict with success status and restored files list
+        """
+        if not self.enabled:
+            raise Exception("Git versioning not enabled")
+        
+        if not self.repo or not self.repo.working_dir:
+            raise Exception("Git repository not available or working directory missing")
+        
+        repo_path = str(self.repo.working_dir)
+        
+        try:
+            # Use HEAD if no commit specified
+            if not commit_hash:
+                # Try to get HEAD commit hash
+                result = subprocess.run(
+                    ['git', 'rev-parse', 'HEAD'],
+                    cwd=repo_path,
+                    capture_output=True,
+                    text=True,
+                    timeout=10
+                )
+                if result.returncode != 0:
+                    raise Exception(f"Cannot get HEAD commit: {result.stderr}")
+                commit_hash = result.stdout.strip()
+            
+            logger.info(f"Restoring files from commit {commit_hash}...")
+            
+            # If file patterns specified, restore only those files
+            if file_patterns:
+                restored_files = []
+                for pattern in file_patterns:
+                    # Get list of files matching pattern in commit
+                    result = subprocess.run(
+                        ['git', 'ls-tree', '-r', '--name-only', commit_hash, pattern],
+                        cwd=repo_path,
+                        capture_output=True,
+                        text=True,
+                        timeout=30
+                    )
+                    if result.returncode == 0:
+                        files = [f.strip() for f in result.stdout.split('\n') if f.strip()]
+                        for file_path in files:
+                            # Restore individual file
+                            restore_result = subprocess.run(
+                                ['git', 'checkout', commit_hash, '--', file_path],
+                                cwd=repo_path,
+                                capture_output=True,
+                                text=True,
+                                timeout=30
+                            )
+                            if restore_result.returncode == 0:
+                                restored_files.append(file_path)
+                                logger.info(f"Restored file: {file_path}")
+                            else:
+                                logger.warning(f"Failed to restore {file_path}: {restore_result.stderr}")
+            else:
+                # Restore all tracked files from commit
+                result = subprocess.run(
+                    ['git', 'checkout', commit_hash, '--', '.'],
+                    cwd=repo_path,
+                    capture_output=True,
+                    text=True,
+                    timeout=60
+                )
+                
+                if result.returncode != 0:
+                    raise Exception(f"Failed to restore files: {result.stderr}")
+                
+                # Get list of restored files
+                status_result = subprocess.run(
+                    ['git', 'status', '--porcelain'],
+                    cwd=repo_path,
+                    capture_output=True,
+                    text=True,
+                    timeout=10
+                )
+                
+                restored_files = []
+                if status_result.returncode == 0:
+                    for line in status_result.stdout.split('\n'):
+                        if line.strip() and not line.startswith('??'):
+                            # Extract filename (handles both staged and unstaged)
+                            parts = line.strip().split()
+                            if len(parts) >= 2:
+                                restored_files.append(parts[-1])
+                
+                logger.info(f"Restored {len(restored_files)} files from commit {commit_hash}")
+            
+            return {
+                "success": True,
+                "commit": commit_hash,
+                "restored_files": restored_files,
+                "count": len(restored_files)
+            }
+            
+        except Exception as e:
+            logger.error(f"Failed to restore files from commit: {e}")
+            raise Exception(f"Restore failed: {e}")
 
 # Global instance
 git_manager = GitManager()
