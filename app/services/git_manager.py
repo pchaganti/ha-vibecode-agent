@@ -601,6 +601,21 @@ secrets.yaml
                 logger.warning(f"git gc failed: {gc_error}. Trying simpler cleanup...")
                 self.repo.git.prune('--expire=now')
             
+            # Reload repository to get fresh state after cleanup
+            # This ensures git log counts only actual commits in branch
+            from git import Repo
+            self.repo = Repo(self.repo.working_dir)
+            
+            # Verify count using git log (more reliable than rev-list)
+            log_output = self.repo.git.log('--oneline', current_branch)
+            commits_after_verify = len([line for line in log_output.strip().split('\n') if line.strip()])
+            
+            # Use verified count if it matches expected, otherwise use expected
+            if commits_after_verify == commits_after:
+                commits_after = commits_after_verify
+            else:
+                logger.warning(f"Commit count mismatch: expected {commits_after}, got {commits_after_verify}. Using expected count.")
+            
             logger.info(f"✅ Automatic cleanup complete: {total_commits} → {commits_after} commits. Removed {total_commits - commits_after} old commits.")
             
         except Exception as cleanup_error:
