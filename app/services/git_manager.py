@@ -113,6 +113,7 @@ secrets.yaml
 """
         try:
             # Only create if it doesn't exist, or update if it's missing critical patterns
+            was_new = not gitignore_path.exists()
             if not gitignore_path.exists():
                 gitignore_path.write_text(gitignore_content)
                 logger.info("Created .gitignore file in config directory")
@@ -123,8 +124,67 @@ secrets.yaml
                     # Append our patterns (user might have custom .gitignore)
                     gitignore_path.write_text(existing_content + "\n\n# HA Vibecode Agent patterns\n" + gitignore_content)
                     logger.info("Updated .gitignore file with agent patterns")
+                    was_new = True  # Treat as new if we just added patterns
+            
+            # Remove already tracked files that should be ignored
+            # This is important for existing repos where large files were already committed
+            if was_new and self.repo is not None:
+                self._remove_tracked_ignored_files()
         except Exception as e:
             logger.warning(f"Failed to create/update .gitignore: {e}")
+    
+    def _remove_tracked_ignored_files(self):
+        """Remove already tracked files from Git index that should be ignored"""
+        try:
+            if self.repo is None:
+                return
+            
+            # Get all tracked files
+            tracked_files = [item.path for item in self.repo.index.entries.values()]
+            
+            # Patterns to match (files that should be ignored)
+            import fnmatch
+            patterns_to_ignore = [
+                '*.db',
+                '*.db-shm',
+                '*.db-wal',
+                '*.db-journal',
+                '*.sqlite',
+                '*.sqlite3',
+                '.storage/*',
+                '.cloud/*',
+                '.homeassistant/*',
+                'home-assistant_v2.db*',
+                'www/*',
+                'media/*',
+                'storage/*',
+                'tmp/*',
+            ]
+            
+            # Find files that match ignore patterns
+            files_to_remove = []
+            for file_path in tracked_files:
+                for pattern in patterns_to_ignore:
+                    # Remove leading slash for matching
+                    normalized_pattern = pattern.lstrip('/')
+                    if fnmatch.fnmatch(file_path, normalized_pattern) or file_path.startswith(normalized_pattern.rstrip('*')):
+                        files_to_remove.append(file_path)
+                        break
+            
+            # Remove files from Git index (but keep on disk)
+            removed_count = 0
+            for file_path in files_to_remove:
+                try:
+                    self.repo.git.rm('--cached', '--ignore-unmatch', file_path)
+                    removed_count += 1
+                    logger.debug(f"Removed {file_path} from Git tracking")
+                except Exception as e:
+                    logger.debug(f"Failed to remove {file_path}: {e}")
+            
+            if removed_count > 0:
+                logger.info(f"Removed {removed_count} ignored files from Git tracking (files kept on disk)")
+        except Exception as e:
+            logger.warning(f"Failed to remove tracked ignored files: {e}")
     
     def _add_config_files_only(self):
         """Add configuration files to Git, excluding large files via .gitignore"""

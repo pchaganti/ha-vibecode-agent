@@ -11,6 +11,7 @@ All notable changes to this project will be documented in this file.
 - ✅ **Automatic `.gitignore` creation**: Git repository now automatically creates `.gitignore` file in `/config` directory to exclude large files
 - ✅ **Excluded large files from Git**: Database files (`.db`, `.db-shm`, `.db-wal`), logs, media files, and Home Assistant internal directories are now automatically excluded
 - ✅ **Smart file tracking**: Only configuration files (YAML, JSON) are tracked in Git, preventing backup size bloat
+- ✅ **Automatic cleanup of tracked files**: When `.gitignore` is created, already tracked large files are automatically removed from Git index (but kept on disk)
 - ✅ **Backward compatibility**: Existing Git repositories are updated with `.gitignore` on next initialization
 
 **What was fixed:**
@@ -24,8 +25,8 @@ All notable changes to this project will be documented in this file.
 
 **Impact:**
 - New installations: Problem completely resolved
-- Existing installations: `.gitignore` will be created automatically, preventing future large files from being added
-- Note: Existing Git history may still contain large files - consider cleaning Git history if needed
+- Existing installations: `.gitignore` will be created automatically, and already tracked large files will be removed from Git index, preventing future large files from being added
+- Note: Existing Git history may still contain large files - consider cleaning Git history if needed (using `git filter-branch` or `git filter-repo`)
 
 **Technical details:**
 - `.gitignore` is automatically created/updated when Git repository is initialized
