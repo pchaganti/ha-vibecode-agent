@@ -138,7 +138,7 @@ Next steps: integrate CO and ventilation control, maybe even let the LLM suggest
 
 Both components are open source:
 
-- [home-assistant-cursor-agent](https://github.com/Coolver/home-assistant-cursor-agent) — the agent that runs on Home Assistant and executes commands from Cursor.  
+- [home-assistant-vibecode-agent](https://github.com/Coolver/home-assistant-vibecode-agent) — the agent that runs on Home Assistant and executes commands from Cursor.  
 - [home-assistant-mcp](https://github.com/Coolver/home-assistant-mcp) — the MCP integration for Cursor that communicates with the agent and provides an automation interface inside the IDE.
 
 ---

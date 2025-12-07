@@ -1,6 +1,6 @@
 # HA Vibecode Agent - Home Assistant Add-on
 
-[![Version](https://img.shields.io/badge/version-2.10.4-blue.svg)](https://github.com/Coolver/home-assistant-cursor-agent)
+[![Version](https://img.shields.io/badge/version-2.10.4-blue.svg)](https://github.com/Coolver/home-assistant-vibecode-agent)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![MCP Package](https://img.shields.io/npm/v/@coolver/home-assistant-mcp?label=MCP%20Package)](https://www.npmjs.com/package/@coolver/home-assistant-mcp)
 
@@ -156,7 +156,7 @@ Your AI IDE gets exactly the actions and data it needs — through a stable API 
 Open your **Home Assistant UI** (usually http://homeassistant.local:8123):
 
 1. Go to **Settings** → **Add-ons** → **Add-on Store** → **⋮** → **Repositories** (usually http://homeassistant.local:8123/hassio/dashboard )
-2. Add: `https://github.com/coolver/home-assistant-cursor-agent`
+2. Add: `https://github.com/coolver/home-assistant-vibecode-agent`
 3. Click **Add**
 
 ### 2. Install and Start Add-on
@@ -179,7 +179,7 @@ You'll see this interface:
 7. Click the **Cursor** or **VS Code** tab (depending on which IDE you want to use with Home Assistant) and **follow the setup instructions**. You’ll need to install and configure Cursor or VS Code so they can connect to the HA Agent via the MCP protocol.
 
 8. That’s it — **you’re ready to start** working with your Home Assistant scripts, automations and dashboards using AI.
-If you find this project useful and want to support its development, **please consider giving it a [GitHub Star](https://github.com/Coolver/home-assistant-cursor-agent) ⭐**
+If you find this project useful and want to support its development, **please consider giving it a [GitHub Star](https://github.com/Coolver/home-assistant-vibecode-agent) ⭐**
 
 [YouTube Installation guide: how to install the Home Assistant Cursor Agent](https://youtu.be/RZNkNZnhMrc)
 
@@ -275,294 +275,11 @@ With this add-on and [MCP integration](https://github.com/Coolver/home-assistant
 
 ## 📚 API Documentation
 
-### Interactive Documentation
-
-Once installed, access:
-
-- **Swagger UI:** `http://homeassistant.local:8099/docs`
-- **ReDoc:** `http://homeassistant.local:8099/redoc`
-
-### Quick Reference
-
-#### Files API (`/api/files`)
-
-```bash
-# List files
-GET /api/files/list?directory=&pattern=*.yaml
-
-# Read file
-GET /api/files/read?path=configuration.yaml
-
-# Write file
-POST /api/files/write
-{
-  "path": "automations.yaml",
-  "content": "...",
-  "create_backup": true
-}
-
-# Append to file
-POST /api/files/append
-{
-  "path": "scripts.yaml",
-  "content": "\nmy_script:\n  ..."
-}
-
-# Delete file
-DELETE /api/files/delete?path=old_file.yaml
-
-# Parse YAML
-GET /api/files/parse_yaml?path=configuration.yaml
-```
-
-#### Entities API (`/api/entities`)
-
-```bash
-# List all entities
-GET /api/entities/list
-
-# Filter by domain
-GET /api/entities/list?domain=climate
-
-# Search entities
-GET /api/entities/list?search=bedroom
-
-# Get specific entity state
-GET /api/entities/state/climate.bedroom_trv_thermostat
-
-# List all services
-GET /api/entities/services
-```
-
-#### Helpers API (`/api/helpers`)
-
-```bash
-# Create helper
-POST /api/helpers/create
-{
-  "domain": "input_boolean",
-  "entity_id": "my_switch",
-  "name": "My Switch",
-  "config": {
-    "icon": "mdi:toggle-switch",
-    "initial": false
-  }
-}
-
-# Delete helper
-DELETE /api/helpers/delete/input_boolean.my_switch
-```
-
-#### Automations API (`/api/automations`)
-
-```bash
-# List automations
-GET /api/automations/list
-
-# Create automation
-POST /api/automations/create
-{
-  "id": "my_automation",
-  "alias": "My Automation",
-  "trigger": [...],
-  "action": [...]
-}
-
-# Delete automation
-DELETE /api/automations/delete/my_automation
-```
-
-#### Scripts API (`/api/scripts`)
-
-```bash
-# List scripts
-GET /api/scripts/list
-
-# Create script
-POST /api/scripts/create
-{
-  "entity_id": "my_script",
-  "alias": "My Script",
-  "sequence": [...]
-}
-
-# Delete script
-DELETE /api/scripts/delete/my_script
-```
-
-#### System API (`/api/system`)
-
-```bash
-# Reload component
-POST /api/system/reload?component=automations
-# Components: automations, scripts, templates, core, all
-
-# Check configuration
-POST /api/system/check_config
-
-# Get HA config
-GET /api/system/config
-
-# Restart HA (⚠️ use carefully!)
-POST /api/system/restart
-```
-
-#### Backup API (`/api/backup`)
-
-```bash
-# Create backup (commit)
-POST /api/backup/commit
-{
-  "message": "Before climate control installation"
-}
-
-# Get backup history
-GET /api/backup/history?limit=20
-
-# Rollback to commit
-POST /api/backup/rollback
-{
-  "commit_hash": "a1b2c3d4"
-}
-
-# Get diff
-GET /api/backup/diff
-GET /api/backup/diff?commit1=a1b2c3d4
-```
-
-#### Logs API (`/api/logs`)
-
-```bash
-# Get agent logs
-GET /api/logs/?limit=100
-GET /api/logs/?level=ERROR
-
-# Clear logs
-DELETE /api/logs/clear
-```
-
----
-
-## 🔐 Authentication
-
-All API endpoints (except `/api/health`) require authentication.
-
-### For MCP Clients (Cursor AI, VS Code etc)
-
-The add-on uses **Agent Key** authentication:
-
-1. Get your Agent Key from **Web UI** (Settings → Add-ons → HA Vibecode Agent → Open Web UI)
-2. Configure in Cursor MCP / VS Code settings with `HA_AGENT_KEY`
-3. Agent Key is auto-generated on first start
-
-### For Direct API Access
-
-Add header to requests:
-```
-Authorization: Bearer YOUR_AGENT_KEY
-```
-
-**Example with curl:**
-
-```bash
-curl -H "Authorization: Bearer YOUR_AGENT_KEY" \
-     http://homeassistant.local:8099/api/entities/list
-```
-
-### Internal Operations
-
-The add-on automatically uses the **Supervisor Token** for Home Assistant API operations. No configuration needed.
-
----
-
-## 💡 Usage Examples
-
-### Example 1: Read configuration
-
-```python
-import requests
-
-headers = {"Authorization": "Bearer YOUR_AGENT_KEY"}
-url = "http://homeassistant.local:8099"
-
-# Read configuration.yaml
-response = requests.get(
-    f"{url}/api/files/read",
-    params={"path": "configuration.yaml"},
-    headers=headers
-)
-config = response.json()['content']
-print(config)
-```
-
-### Example 2: Create automation
-
-```python
-# Create backup first
-requests.post(
-    f"{url}/api/backup/commit",
-    json={"message": "Before adding automation"},
-    headers=headers
-)
-
-# Create automation
-automation = {
-    "id": "test_automation",
-    "alias": "Test Automation",
-    "trigger": [
-        {"platform": "state", "entity_id": "sensor.temperature", "to": "20"}
-    ],
-    "action": [
-        {"service": "light.turn_on", "target": {"entity_id": "light.bedroom"}}
-    ]
-}
-
-response = requests.post(
-    f"{url}/api/automations/create",
-    json=automation,
-    headers=headers
-)
-print(response.json())
-```
-
-### Example 3: List climate entities
-
-```python
-# Get all climate entities
-response = requests.get(
-    f"{url}/api/entities/list",
-    params={"domain": "climate"},
-    headers=headers
-)
-
-climates = response.json()['entities']
-for climate in climates:
-    print(f"{climate['entity_id']}: {climate['attributes']['current_temperature']}°C")
-```
-
-### Example 4: Rollback if something went wrong
-
-```python
-# Get history
-response = requests.get(
-    f"{url}/api/backup/history",
-    headers=headers
-)
-commits = response.json()['commits']
-
-# Rollback to previous commit
-requests.post(
-    f"{url}/api/backup/rollback",
-    json={"commit_hash": commits[1]['hash']},  # Previous commit
-    headers=headers
-)
-
-# Restart HA to apply
-requests.post(
-    f"{url}/api/system/restart",
-    headers=headers
-)
-```
+For complete API documentation, authentication details, and usage examples, see **[DEVELOPMENT.md](DEVELOPMENT.md)**.
+
+**Quick access:**
+- **Swagger UI:** `http://homeassistant.local:8099/docs` (when installed)
+- **ReDoc:** `http://homeassistant.local:8099/redoc` (when installed)
 
 ---
 
@@ -622,67 +339,18 @@ curl -H "Authorization: Bearer YOUR_AGENT_KEY" \
 
 ## 🔧 Development
 
-### Project Structure
+For development setup, project structure, API documentation, and local development instructions, see **[DEVELOPMENT.md](DEVELOPMENT.md)**.
 
-```
-home-assistant-cursor-agent/
-├── config.yaml              # Add-on configuration
-├── Dockerfile               # Container definition
-├── run.sh                   # Startup script
-├── requirements.txt         # Python dependencies
-├── app/
-│   ├── main.py             # FastAPI application
-│   ├── auth.py             # API authentication
-│   ├── ingress_panel.py    # Web UI panel
-│   ├── api/                # API endpoints
-│   │   ├── files.py        # File operations
-│   │   ├── entities.py     # Entity states
-│   │   ├── helpers.py      # Helper management
-│   │   ├── automations.py  # Automation CRUD
-│   │   ├── scripts.py      # Script CRUD
-│   │   ├── system.py       # System operations
-│   │   ├── backup.py       # Git versioning
-│   │   ├── logs.py         # Log access
-│   │   ├── addons.py       # Add-on management
-│   │   ├── hacs.py         # HACS integration
-│   │   ├── lovelace.py     # Dashboard management
-│   │   └── ai_instructions.py # AI guidance docs
-│   ├── services/           # Business logic
-│   │   ├── ha_client.py    # HA REST API client
-│   │   ├── ha_websocket.py # HA WebSocket client
-│   │   ├── supervisor_client.py # Supervisor API
-│   │   ├── file_manager.py # File operations
-│   │   └── git_manager.py  # Git versioning
-│   ├── models/             # Pydantic models
-│   │   └── schemas.py
-│   ├── utils/              # Utilities
-│   │   ├── logger.py       # Logging setup
-│   │   └── yaml_editor.py  # YAML manipulation
-│   ├── templates/          # HTML templates
-│   │   └── ingress_panel.html
-│   └── ai_instructions/    # AI agent guidance
-├── tests/                  # Test suites
-├── CHANGELOG.md
-└── README.md
-```
+## 🤝 Contributing
 
-### Local Development
+Contributions are welcome! If you'd like to contribute:
 
-```bash
-# Install dependencies
-pip install -r requirements.txt
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Submit a pull request
 
-# Set environment variables
-export CONFIG_PATH="/path/to/ha/config"
-export HA_AGENT_KEY="your_dev_key"
-export HA_URL="http://homeassistant.local:8123"
-export PORT=8099
-export LOG_LEVEL=DEBUG
-export ENABLE_GIT=true
-
-# Run
-python -m uvicorn app.main:app --reload --port 8099
-```
+For detailed contribution guidelines, see **[CONTRIBUTING.md](CONTRIBUTING.md)**.
 
 ---
 
