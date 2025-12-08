@@ -4,14 +4,17 @@
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![MCP Package](https://img.shields.io/npm/v/@coolver/home-assistant-mcp?label=MCP%20Package)](https://www.npmjs.com/package/@coolver/home-assistant-mcp)
 
-**Let AI build your Home Assistant automations - just describe what you want in natural language** 🏠🤖
+**Let AI build your Home Assistant automations – just describe what you want in natural language** 🏠🤖
 
-Transform your smart home management! This add-on enables **Cursor AI**, **Visual Studio Code (VS Code)** or **your favourite IDE with MCP** support to:
-- 📝 Analyze your Home Assistant configuration and devices
-- 🏗️ Create intelligent automations, scripts, and complete systems
-- 🔍 Monitor and troubleshoot your setup through log analysis
-- 📦 Install and manage HACS integrations
-- 🔄 Safely deploy changes with automatic Git versioning
+Transform the way you manage your smart home. This add-on enables **Cursor**, **Visual Studio Code (VS Code)**, or any **MCP-enabled IDE** to:
+
+- 📝 Analyze your Home Assistant configuration, entities, and devices  
+- 🏗️ Create intelligent automations, scripts, and complete systems — including Home Assistant helpers that can be fully managed programmatically  
+- 🎨 Design and customize Lovelace dashboards with full control over cards, layouts, and styling  
+- 🖌️ Create and tweak themes for a personalized UI  
+- 🔄 Safely deploy changes with automatic Git-based versioning  
+- 🔍 Monitor and troubleshoot your setup through log analysis  
+- 📦 Install and manage HACS integrations and custom repositories  
 
 No more manual YAML editing or searching through documentation - just describe what you want in natural language!
 
