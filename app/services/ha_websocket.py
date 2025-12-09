@@ -474,15 +474,32 @@ class HAWebSocketClient:
                 if 'area_id' in result:
                     return result
                     
-            return result or {}
+            area_result = result or {}
+            
+            # If result is empty or doesn't have area_id, use fallback
+            if not area_result or not area_result.get('area_id'):
+                logger.info(f"WebSocket result empty for area {area_id}, falling back to list method")
+                areas = await self.get_area_registry_list()
+                for area in areas:
+                    if area.get('area_id') == area_id:
+                        logger.debug(f"Found area {area_id} via fallback method")
+                        return area
+                logger.warning(f"Area {area_id} not found in registry list either")
+                return {}
+            
+            return area_result
         except Exception as e:
             logger.error(f"Error getting area registry entry {area_id}: {e}")
             # Fallback: get from list
-            logger.info(f"Falling back to list method for area {area_id}")
-            areas = await self.get_area_registry_list()
-            for area in areas:
-                if area.get('area_id') == area_id:
-                    return area
+            logger.info(f"Falling back to list method for area {area_id} due to exception")
+            try:
+                areas = await self.get_area_registry_list()
+                for area in areas:
+                    if area.get('area_id') == area_id:
+                        logger.debug(f"Found area {area_id} via fallback method after exception")
+                        return area
+            except Exception as fallback_error:
+                logger.error(f"Fallback also failed: {fallback_error}")
             return {}
     
     async def create_area_registry_entry(self, name: str, aliases: list = None) -> dict:
@@ -593,15 +610,32 @@ class HAWebSocketClient:
                 if 'id' in result or 'device_id' in result:
                     return result
                     
-            return result or {}
+            device_result = result or {}
+            
+            # If result is empty or doesn't have device id, use fallback
+            if not device_result or not (device_result.get('id') or device_result.get('device_id')):
+                logger.info(f"WebSocket result empty for device {device_id}, falling back to list method")
+                devices = await self.get_device_registry_list()
+                for device in devices:
+                    if device.get('id') == device_id:
+                        logger.debug(f"Found device {device_id} via fallback method")
+                        return device
+                logger.warning(f"Device {device_id} not found in registry list either")
+                return {}
+            
+            return device_result
         except Exception as e:
             logger.error(f"Error getting device registry entry {device_id}: {e}")
             # Fallback: get from list
-            logger.info(f"Falling back to list method for device {device_id}")
-            devices = await self.get_device_registry_list()
-            for device in devices:
-                if device.get('id') == device_id:
-                    return device
+            logger.info(f"Falling back to list method for device {device_id} due to exception")
+            try:
+                devices = await self.get_device_registry_list()
+                for device in devices:
+                    if device.get('id') == device_id:
+                        logger.debug(f"Found device {device_id} via fallback method after exception")
+                        return device
+            except Exception as fallback_error:
+                logger.error(f"Fallback also failed: {fallback_error}")
             return {}
     
     async def update_device_registry_entry(self, device_id: str, **kwargs) -> dict:
