@@ -1,6 +1,6 @@
 # 🧪 Home Assistant Agent - Comprehensive Test Suite
 
-**Version:** 2.10.4  
+**Version:** 2.10.5  
 **Purpose:** Complete testing of all HA Cursor Agent MCP functions  
 **Usage:** Say "run Home Assistant Agent test suite" to run full suite
 
@@ -589,37 +589,268 @@
 
 **⚠️ Important:** `test_check_agent_logs_for_errors` should be executed **LAST** after all other tests to validate that no errors were introduced during test execution.
 
-### Phase 1: Read-Only Tests (Safe)
-- All list/get/analyze operations
-- Config checking
-- Log reading
-- Entity queries
-- Registry list operations (Entity/Area/Device)
-- Registry entry retrieval (single entries)
-- Registry dead entities detection (`ha_find_dead_entities`)
-- Log error checking (after all tests)
+### Step-by-Step Testing Plan
 
-### Phase 2: Non-Destructive Writes (Safe)
-- Create test files
-- Git commits
-- Create helpers/automations/scripts for testing
-- Registry updates (with cleanup/restore)
+To avoid context loss during large test runs, tests are broken down into small, manageable steps. Execute 3-5 steps at a time, then pause and continue.
 
-### Phase 3: Reversible Operations (Caution)
-- Install/uninstall test add-ons
-- Dashboard creation/deletion
-- Git rollback (with restore)
+**Total Steps:** 35  
+**Read-Only Steps:** 25  
+**Write Steps:** 10
 
-### Phase 4: System Operations (Warning)
-- Config reload
-- Add-on start/stop
-- HACS operations
+#### Phase 1: Read-Only File Operations (4 steps)
 
-### Phase 5: Destructive Operations (Skip in Production)
-- HA restart
-- HACS uninstall
-- Repository modifications
-- Registry deletions (remove_entity_registry, delete_area_registry)
+**Step 1.1:** `test_list_files_root`  
+- **MCP Tool:** `ha_list_files`  
+- **Parameters:** `{ directory: "/" }`  
+- **Expected:** List of files in root directory
+
+**Step 1.2:** `test_read_configuration_yaml`  
+- **MCP Tool:** `ha_read_file`  
+- **Parameters:** `{ path: "configuration.yaml" }`  
+- **Expected:** File content as string
+
+**Step 1.3:** `test_read_automations_yaml`  
+- **MCP Tool:** `ha_read_file`  
+- **Parameters:** `{ path: "automations.yaml" }`  
+- **Expected:** File content or "not found" error
+
+**Step 1.4:** `test_read_scripts_yaml`  
+- **MCP Tool:** `ha_read_file`  
+- **Parameters:** `{ path: "scripts.yaml" }`  
+- **Expected:** File content or "not found" error
+
+#### Phase 2: Read-Only Entity Operations (3 steps)
+
+**Step 2.1:** `test_list_all_entities`  
+- **MCP Tool:** `ha_list_entities`  
+- **Parameters:** `{}`  
+- **Expected:** Array of all entities
+
+**Step 2.2:** `test_list_climate_entities`  
+- **MCP Tool:** `ha_list_entities`  
+- **Parameters:** `{ domain: "climate" }`  
+- **Expected:** Only climate entities
+
+**Step 2.3:** `test_get_entity_state`  
+- **MCP Tool:** `ha_get_entity_state`  
+- **Parameters:** `{ entity_id: "sun.sun" }`  
+- **Expected:** Entity state object
+
+#### Phase 3: Read-Only Registry Operations (6 steps)
+
+**Step 3.1:** `test_get_entity_registry_list`  
+- **MCP Tool:** `ha_get_entity_registry`  
+- **Parameters:** `{}`  
+- **Expected:** Full Entity Registry with metadata
+
+**Step 3.2:** `test_get_entity_registry_entry`  
+- **MCP Tool:** `ha_get_entity_registry_entry`  
+- **Parameters:** `{ entity_id: "<any existing entity_id>" }`  
+- **Expected:** Single entity registry entry
+
+**Step 3.3:** `test_get_area_registry_list`  
+- **MCP Tool:** `ha_get_area_registry`  
+- **Parameters:** `{}`  
+- **Expected:** Full Area Registry
+
+**Step 3.4:** `test_get_area_registry_entry`  
+- **MCP Tool:** `ha_get_area_registry_entry`  
+- **Parameters:** `{ area_id: "<any existing area_id>" }`  
+- **Expected:** Single area registry entry
+
+**Step 3.5:** `test_get_device_registry_list`  
+- **MCP Tool:** `ha_get_device_registry`  
+- **Parameters:** `{}`  
+- **Expected:** Full Device Registry
+
+**Step 3.6:** `test_find_dead_entities`  
+- **MCP Tool:** `ha_find_dead_entities`  
+- **Parameters:** `{}`  
+- **Expected:** Object with `dead_automations`, `dead_scripts`, `summary`
+
+#### Phase 4: Read-Only Helper Operations (1 step)
+
+**Step 4.1:** `test_list_helpers`  
+- **MCP Tool:** `ha_list_helpers`  
+- **Parameters:** `{}`  
+- **Expected:** List of existing helpers
+
+#### Phase 5: Read-Only Automation Operations (1 step)
+
+**Step 5.1:** `test_list_automations`  
+- **MCP Tool:** `ha_list_automations`  
+- **Parameters:** `{}`  
+- **Expected:** List of automations
+
+#### Phase 6: Read-Only Script Operations (1 step)
+
+**Step 6.1:** `test_list_scripts`  
+- **MCP Tool:** `ha_list_scripts`  
+- **Parameters:** `{}`  
+- **Expected:** List of scripts
+
+#### Phase 7: Read-Only System Operations (2 steps)
+
+**Step 7.1:** `test_check_config`  
+- **MCP Tool:** `ha_check_config`  
+- **Parameters:** `{}`  
+- **Expected:** Configuration validation result
+
+**Step 7.2:** `test_get_logs`  
+- **MCP Tool:** `ha_get_logs`  
+- **Parameters:** `{ limit: 10 }`  
+- **Expected:** Last 10 log entries
+
+#### Phase 8: Read-Only Git Operations (2 steps)
+
+**Step 8.1:** `test_git_history`  
+- **MCP Tool:** `ha_git_history`  
+- **Parameters:** `{ limit: 5 }`  
+- **Expected:** Last 5 commits
+
+**Step 8.2:** `test_git_diff`  
+- **MCP Tool:** `ha_git_diff`  
+- **Parameters:** `{}` (or with commit hashes if needed)  
+- **Expected:** Diff between commits
+
+#### Phase 9: Read-Only HACS Operations (1 step, if installed)
+
+**Step 9.1:** `test_hacs_status`  
+- **MCP Tool:** `ha_hacs_status`  
+- **Parameters:** `{}`  
+- **Expected:** HACS installation status
+
+#### Phase 10: Read-Only Add-on Operations (3 steps)
+
+**Step 10.1:** `test_list_installed_addons`  
+- **MCP Tool:** `ha_list_installed_addons`  
+- **Parameters:** `{}`  
+- **Expected:** Currently installed add-ons
+
+**Step 10.2:** `test_list_addons`  
+- **MCP Tool:** `ha_list_addons`  
+- **Parameters:** `{}`  
+- **Expected:** Available add-ons (limited list)
+
+**Step 10.3:** `test_get_addon_info`  
+- **MCP Tool:** `ha_addon_info`  
+- **Parameters:** `{ slug: "core_mosquitto" }` (or any other installed)  
+- **Expected:** Detailed add-on information
+
+#### Phase 11: Read-Only Dashboard Operations (2 steps)
+
+**Step 11.1:** `test_analyze_entities_for_dashboard`  
+- **MCP Tool:** `ha_analyze_entities_for_dashboard`  
+- **Parameters:** `{}`  
+- **Expected:** Entity analysis for dashboard creation
+
+**Step 11.2:** `test_preview_existing_dashboard`  
+- **MCP Tool:** `ha_preview_dashboard`  
+- **Parameters:** `{}`  
+- **Expected:** Current dashboard configuration
+
+#### Phase 12: Read-Only Repository Operations (1 step)
+
+**Step 12.1:** `test_list_addon_repositories`  
+- **MCP Tool:** `ha_list_repositories`  
+- **Parameters:** `{}`  
+- **Expected:** List of add-on repositories
+
+#### Phase 13: Read-Only Logbook Operations (1 step)
+
+**Step 13.1:** `test_logbook_recent_scripts`  
+- **MCP Tool:** `ha_logbook_entries`  
+- **Parameters:** `{ domains: ["script"], lookback_minutes: 120, limit: 25 }`  
+- **Expected:** Recent logbook entries for scripts
+
+#### Phase 14: Write Operations - Helper (2 steps)
+
+**Step 14.1:** `test_create_input_boolean_helper`  
+- **MCP Tool:** `ha_create_helper`  
+- **Parameters:** `{ type: "input_boolean", config: { name: "Test Agent Helper", icon: "mdi:test-tube" } }`  
+- **Expected:** Helper created successfully  
+- **Cleanup:** Delete helper after test
+
+**Step 14.2:** `test_delete_helper`  
+- **MCP Tool:** `ha_delete_helper`  
+- **Parameters:** `{ entity_id: "input_boolean.test_agent_helper" }`  
+- **Expected:** Helper deleted successfully
+
+#### Phase 15: Write Operations - Automation (2 steps)
+
+**Step 15.1:** `test_create_test_automation`  
+- **MCP Tool:** `ha_create_automation`  
+- **Parameters:** See test definition in section 4  
+- **Expected:** Automation created  
+- **Cleanup:** Delete automation after test
+
+**Step 15.2:** `test_delete_automation`  
+- **MCP Tool:** `ha_delete_automation`  
+- **Parameters:** `{ automation_id: "test_agent_automation" }`  
+- **Expected:** Automation deleted successfully
+
+#### Phase 16: Write Operations - Script (2 steps)
+
+**Step 16.1:** `test_create_test_script`  
+- **MCP Tool:** `ha_create_script`  
+- **Parameters:** See test definition in section 5  
+- **Expected:** Script created  
+- **Cleanup:** Delete script after test
+
+**Step 16.2:** `test_delete_script`  
+- **MCP Tool:** `ha_delete_script`  
+- **Parameters:** `{ script_id: "test_agent_script" }`  
+- **Expected:** Script deleted successfully
+
+#### Phase 17: Write Operations - Registry (3 steps, with cleanup)
+
+**Step 17.1:** `test_update_entity_registry`  
+- **MCP Tool:** `ha_update_entity_registry`  
+- **Parameters:** `{ entity_id: "<existing entity_id>", name: "Test Name" }`  
+- **Expected:** Entity registry updated  
+- **Cleanup:** Restore original name after test
+
+**Step 17.2:** `test_create_area_registry`  
+- **MCP Tool:** `ha_create_area`  
+- **Parameters:** `{ name: "Test Area from Agent" }`  
+- **Expected:** New area created  
+- **Cleanup:** Delete area after test
+
+**Step 17.3:** `test_update_area_registry`  
+- **MCP Tool:** `ha_update_area`  
+- **Parameters:** `{ area_id: "<existing area_id>", name: "Updated Name" }`  
+- **Expected:** Area name updated  
+- **Cleanup:** Restore original name after test
+
+#### Phase 18: Write Operations - Git (1 step)
+
+**Step 18.1:** `test_git_commit`  
+- **MCP Tool:** `ha_git_commit`  
+- **Parameters:** `{ message: "Test commit from HA Agent" }`  
+- **Expected:** Commit created
+
+#### Phase 19: Final Validation (1 step)
+
+**Step 19.1:** `test_check_agent_logs_for_errors`  
+- **MCP Tool:** `ha_get_logs`  
+- **Parameters:** `{ limit: 100, level: "ERROR" }`  
+- **Expected:** Check for errors in agent logs  
+- **Note:** ⚠️ **Must be executed LAST** after all other tests
+
+### Execution Recommendations
+
+1. **Execute 3-5 steps at a time** - optimal size for maintaining context
+2. **Pause between phases** - can stop after each Phase
+3. **Verify results** - check that results match expectations after each step
+4. **Cleanup is important** - don't forget to remove test data after write operations
+5. **Final validation** - Step 19.1 must be last
+
+### Test Output Format
+
+After each step, record:
+- ✅ **PASS** - test passed successfully
+- ❌ **FAIL** - test failed (with error description)
+- ⚠️ **SKIP** - test skipped (with reason)
 
 ---
 
@@ -837,5 +1068,5 @@ HA_AGENT_KEY=<your-token>
 
 **Last Updated:** 2025-12-09  
 **Test Suite Version:** 1.1.0  
-**Compatible with:** HA Cursor Agent v2.10.4+
+**Compatible with:** HA Cursor Agent v2.10.5+
 
