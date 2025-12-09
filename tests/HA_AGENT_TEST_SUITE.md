@@ -10,7 +10,7 @@
 
 - [Files](#1-file-operations-4-tests) (4 tests)
 - [Entities](#2-entity-operations-2-tests) (2 tests)
-- [Registries](#13-registry-operations-11-tests) (11 tests)
+- [Registries](#13-registry-operations-13-tests) (13 tests)
 - [Helpers](#3-helper-operations-2-tests) (2 tests)
 - [Automations](#4-automation-operations-2-tests) (2 tests)
 - [Scripts](#5-script-operations-2-tests) (2 tests)
@@ -22,7 +22,7 @@
 - [Repositories](#11-repository-operations-2-tests) (2 tests)
 - [Logbook](#12-logbook-operations-1-test) (1 test)
 
-**Total:** 64 tests
+**Total:** 65 tests
 
 ---
 
@@ -596,6 +596,7 @@
 - Entity queries
 - Registry list operations (Entity/Area/Device)
 - Registry entry retrieval (single entries)
+- Registry dead entities detection (`ha_find_dead_entities`)
 - Log error checking (after all tests)
 
 ### Phase 2: Non-Destructive Writes (Safe)
@@ -699,7 +700,7 @@ HA_AGENT_KEY=<your-token>
 
 ---
 
-## 13. Registry Operations (12 tests)
+## 13. Registry Operations (13 tests)
 
 ### test_get_entity_registry_list
 **Function:** `ha_get_entity_registry`  
@@ -814,6 +815,23 @@ HA_AGENT_KEY=<your-token>
 **Expected:** Area deleted successfully  
 **Success:** Area removed from registry, subsequent get returns error/not found  
 **Note:** ⚠️ DESTRUCTIVE - only test with test areas created for this purpose
+
+### test_find_dead_entities
+**Function:** `ha_find_dead_entities`  
+**Parameters:** `{}`  
+**Expected:** List of "dead" entities (automations/scripts in registry but not in YAML)  
+**Success:** Returns object with:
+- `dead_automations`: Array of automation entities not found in `automations.yaml`
+- `dead_scripts`: Array of script entities not found in `scripts.yaml`
+- `summary`: Object with counts:
+  - `total_registry_automations`: Total automations in registry
+  - `total_registry_scripts`: Total scripts in registry
+  - `total_yaml_automations`: Total automations in YAML
+  - `total_yaml_scripts`: Total scripts in YAML
+  - `dead_automations_count`: Number of dead automations
+  - `dead_scripts_count`: Number of dead scripts
+  - `total_dead`: Total dead entities
+**Note:** ⚠️ READ-ONLY - safe to run, only analyzes data
 
 ---
 
