@@ -247,12 +247,18 @@ async def list_hacs_repositories(category: Optional[str] = None):
                 # Log file structure for debugging
                 logger.debug(f"HACS storage file keys: {list(storage_data.keys())}")
                 
-                # HACS stores data in 'data' -> 'repositories' structure
-                repositories_data = storage_data.get('data', {}).get('repositories', {})
+                # HACS stores data in 'data' object directly (not 'data' -> 'repositories')
+                # The 'data' key contains a dictionary where keys are repository IDs
+                repositories_data = storage_data.get('data', {})
                 
-                # If 'data' -> 'repositories' is empty, try alternative structures
+                # If 'data' is empty, try alternative structures
                 if not repositories_data:
-                    # Try direct 'repositories' key
+                    # Try 'data' -> 'repositories' structure (older format)
+                    repositories_data = storage_data.get('data', {}).get('repositories', {})
+                    logger.debug(f"Trying 'data.repositories' structure, found {len(repositories_data)} entries")
+                
+                # If still empty, try direct 'repositories' key
+                if not repositories_data:
                     repositories_data = storage_data.get('repositories', {})
                     logger.debug(f"Trying direct 'repositories' key, found {len(repositories_data)} entries")
                 
@@ -264,18 +270,25 @@ async def list_hacs_repositories(category: Optional[str] = None):
                     # Filter by category if specified
                     if category is None or repo_category == category:
                         # Determine if repository is installed
-                        installed = repo_info.get('installed', False) or repo_info.get('installed_version') is not None
+                        # HACS uses 'installed' boolean and 'version_installed' (not 'installed_version')
+                        installed = repo_info.get('installed', False) or repo_info.get('version_installed') is not None
+                        
+                        # Extract name from full_name if name is not available
+                        repo_name = repo_info.get('name', '')
+                        if not repo_name:
+                            full_name = repo_info.get('full_name', '')
+                            repo_name = full_name.split('/')[-1] if '/' in full_name else full_name
                         
                         hacs_repos.append({
                             'repository_id': repo_id,
                             'full_name': repo_info.get('full_name', ''),
-                            'name': repo_info.get('name', ''),
+                            'name': repo_name,
                             'category': repo_category,
                             'installed': installed,
-                            'available_version': repo_info.get('available_version'),
-                            'installed_version': repo_info.get('installed_version'),
+                            'available_version': repo_info.get('available_version') or repo_info.get('version_available'),
+                            'installed_version': repo_info.get('installed_version') or repo_info.get('version_installed'),
                             'description': repo_info.get('description', ''),
-                            'stars': repo_info.get('stars', 0),
+                            'stars': repo_info.get('stars', 0) or repo_info.get('stargazers_count', 0),
                             'downloads': repo_info.get('downloads', 0),
                         })
                 
