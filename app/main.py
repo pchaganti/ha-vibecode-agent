@@ -23,7 +23,7 @@ LOG_LEVEL = os.getenv('LOG_LEVEL', 'info').upper()
 logger = setup_logger('ha_cursor_agent', LOG_LEVEL)
 
 # Agent version
-AGENT_VERSION = "2.10.7"
+AGENT_VERSION = "2.10.8"
 
 # FastAPI app
 app = FastAPI(
@@ -69,32 +69,9 @@ HA_URL = os.getenv('HA_URL', 'http://supervisor/core')
 # API Key configuration
 API_KEY_FROM_CONFIG = os.getenv('API_KEY', '').strip()
 API_KEY_FILE = Path('/config/.ha_cursor_agent_key')
-SEND_NOTIFICATION = os.getenv('SEND_NOTIFICATION_ON_GENERATE', 'false').lower() == 'true'
 
 # Global variable for API key
 API_KEY = None
-
-
-async def send_notification(api_key: str):
-    """Send persistent notification to Home Assistant"""
-    try:
-        async with aiohttp.ClientSession() as session:
-            await session.post(
-                f"{HA_URL}/api/services/persistent_notification/create",
-                headers={
-                    'Authorization': f'Bearer {SUPERVISOR_TOKEN}',
-                    'Content-Type': 'application/json'
-                },
-                json={
-                    'message': f'**HA Vibecode Agent - Agent Key Generated:**\n\n`{api_key}`\n\nView anytime: Settings → Add-ons → HA Vibecode Agent → Open Web UI',
-                    'title': '🔑 HA Vibecode Agent API Key',
-                    'notification_id': 'ha_cursor_agent_key'
-                },
-                timeout=aiohttp.ClientTimeout(total=10)
-            )
-        logger.info("📧 Notification sent to Home Assistant")
-    except Exception as e:
-        logger.warning(f"Failed to send notification: {e}")
 
 
 def get_or_generate_api_key():
@@ -140,18 +117,6 @@ def get_or_generate_api_key():
     logger.info("💡 You can also view it anytime in: Sidebar → API Key")
     logger.info("=" * 70)
     
-    # Send notification if enabled
-    if SEND_NOTIFICATION and SUPERVISOR_TOKEN:
-        try:
-            # Import here to avoid issues at module level
-            import asyncio
-            loop = asyncio.new_event_loop()
-            loop.run_until_complete(send_notification(api_key))
-            loop.close()
-            logger.info("📧 Notification sent to Home Assistant")
-        except Exception as e:
-            logger.warning(f"Failed to send notification: {e}")
-    
     return api_key
 
 
@@ -175,8 +140,6 @@ else:
 logger.info(f"HA_URL: {HA_URL}")
 logger.info(f"API Key (for MCP client): {'Custom (from config)' if API_KEY_FROM_CONFIG else 'Auto-generated'}")
 logger.info(f"=================================")
-
-# Note: Notification logic is handled inside get_or_generate_api_key() function
 
 
 # Startup and shutdown events
@@ -629,7 +592,7 @@ async def health():
         "status": "healthy",
         "version": AGENT_VERSION,
         "config_path": os.getenv('CONFIG_PATH', '/config'),
-        "git_enabled": os.getenv('ENABLE_GIT', 'false') == 'true',
+        "git_versioning_auto": os.getenv('GIT_VERSIONING_AUTO', 'true') == 'true',
         "ai_instructions": "/api/ai/instructions"
     }
 

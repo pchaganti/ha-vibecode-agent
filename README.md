@@ -1,6 +1,6 @@
 # HA Vibecode Agent - Home Assistant Add-on
 
-[![Version](https://img.shields.io/badge/version-2.10.7-blue.svg)](https://github.com/Coolver/home-assistant-vibecode-agent)
+[![Version](https://img.shields.io/badge/version-2.10.8-blue.svg)](https://github.com/Coolver/home-assistant-vibecode-agent)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![MCP Package](https://img.shields.io/npm/v/@coolver/home-assistant-mcp?label=MCP%20Package)](https://www.npmjs.com/package/@coolver/home-assistant-mcp)
 
@@ -517,7 +517,8 @@ Common issues:
 
 ### Git versioning not working
 
-- Check `enable_git_versioning` is `true`
+- Git versioning is always enabled in shadow repository (`/config/ha_vibecode_git`)
+- Check `git_versioning_auto` setting for auto/manual commit mode
 - View logs for Git errors
 - Ensure `/config` is writable
 
