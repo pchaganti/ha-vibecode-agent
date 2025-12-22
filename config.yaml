@@ -25,7 +25,6 @@ options:
   git_versioning_auto: true
   max_backups: 30
   api_key: ""
-  send_notification_on_generate: false
 
 schema:
   port: int
@@ -33,7 +32,6 @@ schema:
   git_versioning_auto: bool
   max_backups: int
   api_key: str?
-  send_notification_on_generate: bool
 
 ports:
   8099/tcp: 8099
