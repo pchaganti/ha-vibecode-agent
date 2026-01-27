@@ -318,8 +318,14 @@ class HomeAssistantClient:
                 if config:
                     automations.append(config)
                 else:
-                    # If not in cache, at least add the ID
-                    automations.append({'id': automation_id})
+                    # If not in cache, try to get it via get_automation (fallback)
+                    # This handles cases where automation exists in Entity Registry but wasn't found in cache
+                    try:
+                        full_config = await self.get_automation(automation_id)
+                        automations.append(full_config)
+                    except Exception:
+                        # If we still can't get it, at least add the ID
+                        automations.append({'id': automation_id})
             
             # Add file-based automations not in Entity Registry
             for auto_id, auto_config in automation_cache.items():
