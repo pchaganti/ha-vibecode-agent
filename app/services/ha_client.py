@@ -196,6 +196,222 @@ class HomeAssistantClient:
         except Exception as e:
             logger.error(f"Failed to rename entity via WebSocket: {e}")
             raise Exception(f"Failed to rename entity {old_entity_id} to {new_entity_id}: {e}")
+    
+    # ==================== Automation API ====================
+    
+    async def list_automations(self) -> List[Dict]:
+        """
+        List all automations from Home Assistant (via REST API)
+        
+        Returns all automations that HA has loaded, regardless of source:
+        - From automations.yaml
+        - From packages/*.yaml
+        - Created via UI (stored in .storage)
+        
+        Returns:
+            List of automation configurations
+        """
+        try:
+            result = await self._request('GET', 'config/automation/config')
+            # HA returns a dict where keys are automation_ids and values are configs
+            if isinstance(result, dict):
+                automations = []
+                for automation_id, config in result.items():
+                    # Ensure 'id' field is present
+                    automation = dict(config) if isinstance(config, dict) else config
+                    if 'id' not in automation:
+                        automation['id'] = automation_id
+                    automations.append(automation)
+                return automations
+            return result if isinstance(result, list) else []
+        except Exception as e:
+            logger.error(f"Failed to list automations via API: {e}")
+            raise
+    
+    async def get_automation(self, automation_id: str) -> Dict:
+        """
+        Get single automation configuration by ID
+        
+        Args:
+            automation_id: Automation ID
+            
+        Returns:
+            Automation configuration dict
+        """
+        try:
+            result = await self._request('GET', f'config/automation/config/{automation_id}', suppress_404_logging=True)
+            # Ensure 'id' field is present
+            if isinstance(result, dict) and 'id' not in result:
+                result['id'] = automation_id
+            return result
+        except Exception as e:
+            error_msg = str(e)
+            if '404' in error_msg or 'not found' in error_msg.lower():
+                raise Exception(f"Automation not found: {automation_id}")
+            logger.error(f"Failed to get automation {automation_id} via API: {e}")
+            raise
+    
+    async def create_automation(self, automation_config: Dict) -> Dict:
+        """
+        Create new automation via REST API
+        
+        Args:
+            automation_config: Automation configuration dict (must include 'id')
+            
+        Returns:
+            Created automation configuration
+        """
+        automation_id = automation_config.get('id')
+        if not automation_id:
+            raise ValueError("Automation config must include 'id' field")
+        
+        try:
+            result = await self._request('POST', f'config/automation/config/{automation_id}', data=automation_config)
+            logger.info(f"Created automation via API: {automation_id}")
+            return result
+        except Exception as e:
+            logger.error(f"Failed to create automation {automation_id} via API: {e}")
+            raise
+    
+    async def update_automation(self, automation_id: str, automation_config: Dict) -> Dict:
+        """
+        Update existing automation via REST API
+        
+        Args:
+            automation_id: Automation ID
+            automation_config: Updated automation configuration
+            
+        Returns:
+            Updated automation configuration
+        """
+        try:
+            # Ensure 'id' matches
+            config = dict(automation_config)
+            config['id'] = automation_id
+            result = await self._request('POST', f'config/automation/config/{automation_id}', data=config)
+            logger.info(f"Updated automation via API: {automation_id}")
+            return result
+        except Exception as e:
+            logger.error(f"Failed to update automation {automation_id} via API: {e}")
+            raise
+    
+    async def delete_automation(self, automation_id: str) -> Dict:
+        """
+        Delete automation via REST API
+        
+        Args:
+            automation_id: Automation ID to delete
+            
+        Returns:
+            Deletion result
+        """
+        try:
+            result = await self._request('DELETE', f'config/automation/config/{automation_id}')
+            logger.info(f"Deleted automation via API: {automation_id}")
+            return result
+        except Exception as e:
+            error_msg = str(e)
+            if '404' in error_msg or 'not found' in error_msg.lower():
+                raise Exception(f"Automation not found: {automation_id}")
+            logger.error(f"Failed to delete automation {automation_id} via API: {e}")
+            raise
+    
+    # ==================== Script API ====================
+    
+    async def list_scripts(self) -> Dict[str, Dict]:
+        """
+        List all scripts from Home Assistant (via REST API)
+        
+        Returns all scripts that HA has loaded, regardless of source.
+        
+        Returns:
+            Dict where keys are script_ids and values are script configs
+        """
+        try:
+            result = await self._request('GET', 'config/script/config')
+            return result if isinstance(result, dict) else {}
+        except Exception as e:
+            logger.error(f"Failed to list scripts via API: {e}")
+            raise
+    
+    async def get_script(self, script_id: str) -> Dict:
+        """
+        Get single script configuration by ID
+        
+        Args:
+            script_id: Script ID
+            
+        Returns:
+            Script configuration dict
+        """
+        try:
+            result = await self._request('GET', f'config/script/config/{script_id}', suppress_404_logging=True)
+            return result
+        except Exception as e:
+            error_msg = str(e)
+            if '404' in error_msg or 'not found' in error_msg.lower():
+                raise Exception(f"Script not found: {script_id}")
+            logger.error(f"Failed to get script {script_id} via API: {e}")
+            raise
+    
+    async def create_script(self, script_id: str, script_config: Dict) -> Dict:
+        """
+        Create new script via REST API
+        
+        Args:
+            script_id: Script ID
+            script_config: Script configuration dict
+            
+        Returns:
+            Created script configuration
+        """
+        try:
+            result = await self._request('POST', f'config/script/config/{script_id}', data=script_config)
+            logger.info(f"Created script via API: {script_id}")
+            return result
+        except Exception as e:
+            logger.error(f"Failed to create script {script_id} via API: {e}")
+            raise
+    
+    async def update_script(self, script_id: str, script_config: Dict) -> Dict:
+        """
+        Update existing script via REST API
+        
+        Args:
+            script_id: Script ID
+            script_config: Updated script configuration
+            
+        Returns:
+            Updated script configuration
+        """
+        try:
+            result = await self._request('POST', f'config/script/config/{script_id}', data=script_config)
+            logger.info(f"Updated script via API: {script_id}")
+            return result
+        except Exception as e:
+            logger.error(f"Failed to update script {script_id} via API: {e}")
+            raise
+    
+    async def delete_script(self, script_id: str) -> Dict:
+        """
+        Delete script via REST API
+        
+        Args:
+            script_id: Script ID to delete
+            
+        Returns:
+            Deletion result
+        """
+        try:
+            result = await self._request('DELETE', f'config/script/config/{script_id}')
+            logger.info(f"Deleted script via API: {script_id}")
+            return result
+        except Exception as e:
+            error_msg = str(e)
+            if '404' in error_msg or 'not found' in error_msg.lower():
+                raise Exception(f"Script not found: {script_id}")
+            logger.error(f"Failed to delete script {script_id} via API: {e}")
+            raise
 
 # Global client instance
 ha_client = HomeAssistantClient()

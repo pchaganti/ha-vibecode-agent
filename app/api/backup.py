@@ -2,6 +2,7 @@
 from fastapi import APIRouter, HTTPException, Query, Body
 from typing import List, Optional
 import logging
+from pathlib import Path
 
 from app.models.schemas import BackupRequest, RollbackRequest, Response
 from app.services.git_manager import git_manager
@@ -117,19 +118,57 @@ async def rollback_to_commit_path(commit_hash: str):
     
     **⚠️ WARNING: This will overwrite current configuration!**
     
+    **Important:** If the commit contains exported automations/scripts (export/automations/*.yaml, export/scripts/*.yaml),
+    they will be restored via Home Assistant API. Regular files (automations.yaml, scripts.yaml, packages/*) will be
+    restored as files (for backwards compatibility with old commits).
+    
     **Example:**
     - POST `/api/backup/rollback/a1b2c3d4`
     """
     try:
+        # Import here to avoid circular dependencies
+        from app.api.automations import _apply_automations_from_git_export
+        from app.api.scripts import _apply_scripts_from_git_export
         
+        # Perform file-based rollback first (for backwards compatibility)
         result = await git_manager.rollback(commit_hash)
         
-        logger.warning(f"Rolled back to: {commit_hash}")
+        # After rollback, check if there are exported automations/scripts and apply them via API
+        shadow_root = git_manager.shadow_root
+        export_automations_dir = shadow_root / 'export' / 'automations'
+        export_scripts_dir = shadow_root / 'export' / 'scripts'
+        
+        applied_automations = 0
+        applied_scripts = 0
+        
+        # Apply exported automations via API if they exist
+        if export_automations_dir.exists():
+            try:
+                applied_automations = await _apply_automations_from_git_export(export_automations_dir)
+                logger.info(f"Applied {applied_automations} automations from Git export via API")
+            except Exception as e:
+                logger.warning(f"Failed to apply automations from Git export: {e}")
+        
+        # Apply exported scripts via API if they exist
+        if export_scripts_dir.exists():
+            try:
+                applied_scripts = await _apply_scripts_from_git_export(export_scripts_dir)
+                logger.info(f"Applied {applied_scripts} scripts from Git export via API")
+            except Exception as e:
+                logger.warning(f"Failed to apply scripts from Git export: {e}")
+        
+        logger.warning(f"Rolled back to: {commit_hash} (applied {applied_automations} automations, {applied_scripts} scripts via API)")
         
         return Response(
             success=True,
             message=f"Rolled back to commit: {commit_hash}",
-            data=result
+            data={
+                **result,
+                "applied_via_api": {
+                    "automations": applied_automations,
+                    "scripts": applied_scripts
+                }
+            }
         )
     except Exception as e:
         logger.error(f"Failed to rollback: {e}")
@@ -141,6 +180,9 @@ async def rollback_to_commit_body(rollback: RollbackRequest):
     Rollback configuration to specific commit (body parameter version)
     
     **⚠️ WARNING: This will overwrite current configuration!**
+    
+    **Important:** If the commit contains exported automations/scripts (export/automations/*.yaml, export/scripts/*.yaml),
+    they will be restored via Home Assistant API. Regular files will be restored as files (for backwards compatibility).
     
     **Example:**
     ```json

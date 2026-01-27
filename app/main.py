@@ -9,7 +9,7 @@ import secrets
 from pathlib import Path
 from fastapi import FastAPI, HTTPException, Depends, Security, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-# CORSMiddleware import removed - CORS disabled for security
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, HTMLResponse
 
 from app.api import files, entities, helpers, automations, scripts, system, backup, logs, logbook, ai_instructions, hacs, addons, lovelace, themes, registries
@@ -26,7 +26,7 @@ LOG_LEVEL = os.getenv('LOG_LEVEL', 'info').upper()
 logger = setup_logger('ha_cursor_agent', LOG_LEVEL)
 
 # Agent version
-AGENT_VERSION = "2.10.12"
+AGENT_VERSION = "2.10.13"
 
 # FastAPI app
 app = FastAPI(
@@ -37,14 +37,6 @@ app = FastAPI(
     redoc_url="/redoc"
 )
 
-<<<<<<< HEAD
-# CORS middleware removed for security
-# This application is accessed via:
-# - MCP clients (not browser-based, CORS doesn't apply)
-# - Home Assistant ingress (same-origin)
-# - Local network (same-origin or direct)
-# If CORS is needed, configure specific origins via CORS_ALLOWED_ORIGINS env var
-=======
 # CORS
 # Note:
 # - MCP clients (Cursor, VS Code, Codex, Claude Code, etc.) talk to the agent as
@@ -59,7 +51,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
->>>>>>> 1dafb08 (security: require auth for API key regeneration)
 
 # Track MCP client versions (to avoid logging on every request)
 mcp_clients_logged = set()
