@@ -346,14 +346,23 @@ secrets.yaml
                     logger.warning(f"Failed to copy {src} to shadow repo: {e}")
 
         # Remove files from shadow_root that are no longer present in /config
+        # BUT preserve export/ directory (created by agent, not synced from /config)
         for root, dirs, files in os.walk(shadow_root):
             # Never touch .git inside the shadow repo
             if '.git' in dirs:
                 dirs.remove('.git')
+            
+            # Skip export/ directory - it's managed by agent, not synced from /config
+            if 'export' in dirs:
+                dirs.remove('export')
 
             rel_root = os.path.relpath(root, shadow_root)
             if rel_root == '.':
                 rel_root = ''
+
+            # Skip export/ directory entirely
+            if rel_root.startswith('export'):
+                continue
 
             for filename in files:
                 rel_path = os.path.join(rel_root, filename) if rel_root else filename
