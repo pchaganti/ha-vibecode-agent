@@ -290,6 +290,15 @@ class HomeAssistantClient:
                             auto_id = auto.get('id')
                             if auto_id:
                                 automation_cache[auto_id] = auto
+                            
+                            # Also index by entity_id if different from id
+                            entity_id = auto.get('entity_id', '')
+                            if entity_id.startswith('automation.'):
+                                entity_id_clean = entity_id.replace('automation.', '', 1)
+                                if entity_id_clean and entity_id_clean != auto_id:
+                                    # Store under both IDs for lookup
+                                    if entity_id_clean not in automation_cache:
+                                        automation_cache[entity_id_clean] = auto
             except Exception:
                 pass
             
@@ -399,7 +408,16 @@ class HomeAssistantClient:
                     storage_data = json.loads(content)
                     if 'data' in storage_data and 'automations' in storage_data['data']:
                         for auto in storage_data['data']['automations']:
-                            if auto.get('id') == automation_id:
+                            # Check both 'id' field and entity_id from entity registry
+                            auto_id = auto.get('id')
+                            # Also check if automation_id matches entity_id (without 'automation.' prefix)
+                            entity_id = auto.get('entity_id', '')
+                            if entity_id.startswith('automation.'):
+                                entity_id_clean = entity_id.replace('automation.', '', 1)
+                            else:
+                                entity_id_clean = entity_id
+                            
+                            if auto_id == automation_id or entity_id_clean == automation_id:
                                 return auto
             except Exception:
                 pass
