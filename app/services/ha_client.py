@@ -201,12 +201,16 @@ class HomeAssistantClient:
     
     async def list_automations(self) -> List[Dict]:
         """
-        List all automations from Home Assistant (via WebSocket API)
+        List all automations from Home Assistant (via Entity Registry + file system)
         
         Returns all automations that HA has loaded, regardless of source:
         - From automations.yaml
         - From packages/*.yaml
         - Created via UI (stored in .storage)
+        
+        Note: Home Assistant doesn't provide WebSocket API for listing automations.
+        We use Entity Registry to get all automation entities, then collect their
+        configurations from files and .storage.
         
         Returns:
             List of automation configurations
@@ -214,28 +218,109 @@ class HomeAssistantClient:
         try:
             # Import here to avoid circular dependency
             from app.services.ha_websocket import get_ws_client
+            from app.services.file_manager import file_manager
+            import json
+            import yaml
+            from pathlib import Path
             
+            # Get all automation entities from Entity Registry
             ws_client = await get_ws_client()
-            result = await ws_client._send_message({'type': 'config/automation/list'})
+            entity_registry = await ws_client.get_entity_registry_list()
             
-            # WebSocket returns a list of automations
-            if isinstance(result, list):
-                automations = []
-                for automation in result:
-                    # Ensure 'id' field is present
-                    automation_dict = dict(automation) if isinstance(automation, dict) else automation
-                    if 'id' not in automation_dict and 'automation_id' in automation_dict:
-                        automation_dict['id'] = automation_dict['automation_id']
-                    automations.append(automation_dict)
-                return automations
-            return result if isinstance(result, list) else []
+            # Filter automation entities
+            automation_entities = [
+                e for e in entity_registry 
+                if e.get('entity_id', '').startswith('automation.')
+            ]
+            
+            automations = []
+            automation_ids_seen = set()
+            
+            # Get automation IDs from entity registry
+            for entity in automation_entities:
+                entity_id = entity.get('entity_id', '')
+                if not entity_id.startswith('automation.'):
+                    continue
+                
+                # Extract automation_id from entity_id (automation.xxx -> xxx)
+                automation_id = entity_id.replace('automation.', '', 1)
+                
+                # Also check capabilities.id (for UI-created automations)
+                capabilities = entity.get('capabilities', {})
+                if isinstance(capabilities, dict):
+                    alt_id = capabilities.get('id')
+                    if alt_id and alt_id != automation_id:
+                        automation_id = alt_id
+                
+                if automation_id in automation_ids_seen:
+                    continue
+                automation_ids_seen.add(automation_id)
+                
+                # Try to get automation config
+                try:
+                    config = await self.get_automation(automation_id)
+                    if config:
+                        automations.append(config)
+                except Exception:
+                    # If we can't get config, at least add the ID
+                    automations.append({'id': automation_id})
+            
+            # Also try to read from files (for file-based automations not in registry)
+            try:
+                # Read automations.yaml
+                try:
+                    content = await file_manager.read_file('automations.yaml', suppress_not_found_logging=True)
+                    file_automations = yaml.safe_load(content) or []
+                    if isinstance(file_automations, list):
+                        for auto in file_automations:
+                            auto_id = auto.get('id')
+                            if auto_id and auto_id not in automation_ids_seen:
+                                automations.append(auto)
+                                automation_ids_seen.add(auto_id)
+                except Exception:
+                    pass
+                
+                # Read packages/*.yaml files
+                try:
+                    packages_dir = file_manager.config_path / 'packages'
+                    if packages_dir.exists():
+                        for yaml_file in packages_dir.rglob('*.yaml'):
+                            try:
+                                content = yaml_file.read_text(encoding='utf-8')
+                                data = yaml.safe_load(content)
+                                if isinstance(data, dict) and 'automation' in data:
+                                    pkg_automations = data['automation']
+                                    if isinstance(pkg_automations, list):
+                                        for auto in pkg_automations:
+                                            auto_id = auto.get('id')
+                                            if auto_id and auto_id not in automation_ids_seen:
+                                                automations.append(auto)
+                                                automation_ids_seen.add(auto_id)
+                                    elif isinstance(pkg_automations, dict):
+                                        # Handle dict format: {id: config}
+                                        for auto_id, auto_config in pkg_automations.items():
+                                            if auto_id not in automation_ids_seen:
+                                                auto = dict(auto_config) if isinstance(auto_config, dict) else auto_config
+                                                if isinstance(auto, dict):
+                                                    auto['id'] = auto_id
+                                                automations.append(auto)
+                                                automation_ids_seen.add(auto_id)
+                            except Exception:
+                                continue
+                except Exception:
+                    pass
+            except Exception as e:
+                logger.warning(f"Failed to read automations from files: {e}")
+            
+            return automations
+            
         except Exception as e:
-            logger.error(f"Failed to list automations via WebSocket API: {e}")
+            logger.error(f"Failed to list automations: {e}")
             raise
     
     async def get_automation(self, automation_id: str) -> Dict:
         """
-        Get single automation configuration by ID (via WebSocket API)
+        Get single automation configuration by ID (via files + .storage)
         
         Args:
             automation_id: Automation ID
@@ -244,28 +329,67 @@ class HomeAssistantClient:
             Automation configuration dict
         """
         try:
-            # Import here to avoid circular dependency
-            from app.services.ha_websocket import get_ws_client
+            from app.services.file_manager import file_manager
+            import yaml
+            import json
+            from pathlib import Path
             
-            ws_client = await get_ws_client()
-            result = await ws_client._send_message({
-                'type': 'config/automation/get',
-                'automation_id': automation_id
-            })
+            # Try to find in automations.yaml
+            try:
+                content = await file_manager.read_file('automations.yaml', suppress_not_found_logging=True)
+                automations = yaml.safe_load(content) or []
+                if isinstance(automations, list):
+                    for auto in automations:
+                        if auto.get('id') == automation_id:
+                            return auto
+            except Exception:
+                pass
             
-            # Handle wrapped response format
-            if isinstance(result, dict) and 'result' in result:
-                result = result['result']
+            # Try to find in packages/*.yaml
+            try:
+                packages_dir = file_manager.config_path / 'packages'
+                if packages_dir.exists():
+                    for yaml_file in packages_dir.rglob('*.yaml'):
+                        try:
+                            content = yaml_file.read_text(encoding='utf-8')
+                            data = yaml.safe_load(content)
+                            if isinstance(data, dict) and 'automation' in data:
+                                pkg_automations = data['automation']
+                                if isinstance(pkg_automations, list):
+                                    for auto in pkg_automations:
+                                        if auto.get('id') == automation_id:
+                                            return auto
+                                elif isinstance(pkg_automations, dict):
+                                    if automation_id in pkg_automations:
+                                        auto = dict(pkg_automations[automation_id]) if isinstance(pkg_automations[automation_id], dict) else pkg_automations[automation_id]
+                                        if isinstance(auto, dict):
+                                            auto['id'] = automation_id
+                                        return auto
+                        except Exception:
+                            continue
+            except Exception:
+                pass
             
-            # Ensure 'id' field is present
-            if isinstance(result, dict) and 'id' not in result:
-                result['id'] = automation_id
-            return result
+            # Try to find in .storage (UI-created automations)
+            try:
+                storage_file = file_manager.config_path / '.storage' / 'automation.storage'
+                if storage_file.exists():
+                    content = storage_file.read_text(encoding='utf-8')
+                    storage_data = json.loads(content)
+                    if 'data' in storage_data and 'automations' in storage_data['data']:
+                        for auto in storage_data['data']['automations']:
+                            if auto.get('id') == automation_id:
+                                return auto
+            except Exception:
+                pass
+            
+            raise Exception(f"Automation not found: {automation_id}")
+            
         except Exception as e:
             error_msg = str(e)
-            if '404' in error_msg or 'not found' in error_msg.lower():
+            if 'not found' in error_msg.lower():
                 raise Exception(f"Automation not found: {automation_id}")
-            logger.error(f"Failed to get automation {automation_id} via WebSocket API: {e}")
+            logger.error(f"Failed to get automation {automation_id}: {e}")
             raise
     
     async def create_automation(self, automation_config: Dict) -> Dict:
@@ -376,9 +500,13 @@ class HomeAssistantClient:
     
     async def list_scripts(self) -> Dict[str, Dict]:
         """
-        List all scripts from Home Assistant (via WebSocket API)
+        List all scripts from Home Assistant (via Entity Registry + file system)
         
         Returns all scripts that HA has loaded, regardless of source.
+        
+        Note: Home Assistant doesn't provide WebSocket API for listing scripts.
+        We use Entity Registry to get all script entities, then collect their
+        configurations from files and .storage.
         
         Returns:
             Dict where keys are script_ids and values are script configs
@@ -386,27 +514,91 @@ class HomeAssistantClient:
         try:
             # Import here to avoid circular dependency
             from app.services.ha_websocket import get_ws_client
+            from app.services.file_manager import file_manager
+            import json
+            import yaml
+            from pathlib import Path
             
+            # Get all script entities from Entity Registry
             ws_client = await get_ws_client()
-            result = await ws_client._send_message({'type': 'config/script/list'})
+            entity_registry = await ws_client.get_entity_registry_list()
             
-            # WebSocket returns a list, convert to dict keyed by script_id
-            if isinstance(result, list):
-                scripts_dict = {}
-                for script in result:
-                    script_dict = dict(script) if isinstance(script, dict) else script
-                    script_id = script_dict.get('script_id') or script_dict.get('id')
-                    if script_id:
-                        scripts_dict[script_id] = script_dict
-                return scripts_dict
-            return result if isinstance(result, dict) else {}
+            # Filter script entities
+            script_entities = [
+                e for e in entity_registry 
+                if e.get('entity_id', '').startswith('script.')
+            ]
+            
+            scripts = {}
+            script_ids_seen = set()
+            
+            # Get script IDs from entity registry
+            for entity in script_entities:
+                entity_id = entity.get('entity_id', '')
+                if not entity_id.startswith('script.'):
+                    continue
+                
+                # Extract script_id from entity_id (script.xxx -> xxx)
+                script_id = entity_id.replace('script.', '', 1)
+                
+                if script_id in script_ids_seen:
+                    continue
+                script_ids_seen.add(script_id)
+                
+                # Try to get script config
+                try:
+                    config = await self.get_script(script_id)
+                    if config:
+                        scripts[script_id] = config
+                except Exception:
+                    # If we can't get config, at least add empty dict
+                    scripts[script_id] = {}
+            
+            # Also try to read from files (for file-based scripts not in registry)
+            try:
+                # Read scripts.yaml
+                try:
+                    content = await file_manager.read_file('scripts.yaml', suppress_not_found_logging=True)
+                    file_scripts = yaml.safe_load(content) or {}
+                    if isinstance(file_scripts, dict):
+                        for script_id, script_config in file_scripts.items():
+                            if script_id not in script_ids_seen:
+                                scripts[script_id] = script_config
+                                script_ids_seen.add(script_id)
+                except Exception:
+                    pass
+                
+                # Read packages/*.yaml files
+                try:
+                    packages_dir = file_manager.config_path / 'packages'
+                    if packages_dir.exists():
+                        for yaml_file in packages_dir.rglob('*.yaml'):
+                            try:
+                                content = yaml_file.read_text(encoding='utf-8')
+                                data = yaml.safe_load(content)
+                                if isinstance(data, dict) and 'script' in data:
+                                    pkg_scripts = data['script']
+                                    if isinstance(pkg_scripts, dict):
+                                        for script_id, script_config in pkg_scripts.items():
+                                            if script_id not in script_ids_seen:
+                                                scripts[script_id] = script_config
+                                                script_ids_seen.add(script_id)
+                            except Exception:
+                                continue
+                except Exception:
+                    pass
+            except Exception as e:
+                logger.warning(f"Failed to read scripts from files: {e}")
+            
+            return scripts
+            
         except Exception as e:
-            logger.error(f"Failed to list scripts via WebSocket API: {e}")
+            logger.error(f"Failed to list scripts: {e}")
             raise
     
     async def get_script(self, script_id: str) -> Dict:
         """
-        Get single script configuration by ID (via WebSocket API)
+        Get single script configuration by ID (via files + .storage)
         
         Args:
             script_id: Script ID
@@ -415,25 +607,57 @@ class HomeAssistantClient:
             Script configuration dict
         """
         try:
-            # Import here to avoid circular dependency
-            from app.services.ha_websocket import get_ws_client
+            from app.services.file_manager import file_manager
+            import yaml
+            import json
+            from pathlib import Path
             
-            ws_client = await get_ws_client()
-            result = await ws_client._send_message({
-                'type': 'config/script/get',
-                'script_id': script_id
-            })
+            # Try to find in scripts.yaml
+            try:
+                content = await file_manager.read_file('scripts.yaml', suppress_not_found_logging=True)
+                scripts = yaml.safe_load(content) or {}
+                if isinstance(scripts, dict) and script_id in scripts:
+                    return scripts[script_id]
+            except Exception:
+                pass
             
-            # Handle wrapped response format
-            if isinstance(result, dict) and 'result' in result:
-                result = result['result']
+            # Try to find in packages/*.yaml
+            try:
+                packages_dir = file_manager.config_path / 'packages'
+                if packages_dir.exists():
+                    for yaml_file in packages_dir.rglob('*.yaml'):
+                        try:
+                            content = yaml_file.read_text(encoding='utf-8')
+                            data = yaml.safe_load(content)
+                            if isinstance(data, dict) and 'script' in data:
+                                pkg_scripts = data['script']
+                                if isinstance(pkg_scripts, dict) and script_id in pkg_scripts:
+                                    return pkg_scripts[script_id]
+                        except Exception:
+                            continue
+            except Exception:
+                pass
             
-            return result
+            # Try to find in .storage (UI-created scripts)
+            try:
+                storage_file = file_manager.config_path / '.storage' / 'script.storage'
+                if storage_file.exists():
+                    content = storage_file.read_text(encoding='utf-8')
+                    storage_data = json.loads(content)
+                    if 'data' in storage_data and 'scripts' in storage_data['data']:
+                        scripts_dict = storage_data['data']['scripts']
+                        if script_id in scripts_dict:
+                            return scripts_dict[script_id]
+            except Exception:
+                pass
+            
+            raise Exception(f"Script not found: {script_id}")
+            
         except Exception as e:
             error_msg = str(e)
-            if '404' in error_msg or 'not found' in error_msg.lower():
+            if 'not found' in error_msg.lower():
                 raise Exception(f"Script not found: {script_id}")
-            logger.error(f"Failed to get script {script_id} via WebSocket API: {e}")
+            logger.error(f"Failed to get script {script_id}: {e}")
             raise
     
     async def create_script(self, script_id: str, script_config: Dict) -> Dict:
