@@ -774,7 +774,60 @@ class HomeAssistantClient:
             # Find where automation is located
             location = await self._find_automation_location(automation_id)
             if not location:
-                raise Exception(f"Automation '{automation_id}' not found")
+                # If automation not found in storage, it might be a "ghost" entry in Entity Registry
+                # Try to find by alias and remove all matching entries from Entity Registry
+                try:
+                    from app.services.ha_websocket import get_ws_client
+                    ws_client = await get_ws_client()
+                    
+                    # Get Entity Registry to find automations by alias
+                    entity_registry = await ws_client.get_entity_registry()
+                    automation_entities = [e for e in entity_registry if e.get('entity_id', '').startswith('automation.')]
+                    
+                    # Normalize automation_id for alias matching
+                    automation_id_normalized = automation_id.lower().replace(' ', '_').replace('-', '_')
+                    
+                    removed_entities = []
+                    for entity in automation_entities:
+                        entity_id = entity.get('entity_id', '')
+                        entity_name = entity.get('name', '')
+                        
+                        # Check if entity_id matches
+                        if entity_id == f"automation.{automation_id}" or entity_id.replace('automation.', '', 1) == automation_id:
+                            try:
+                                await ws_client.remove_entity_registry_entry(entity_id)
+                                removed_entities.append(entity_id)
+                                logger.info(f"Removed ghost automation from Entity Registry by id: {entity_id}")
+                            except Exception as e:
+                                logger.warning(f"Failed to remove {entity_id}: {e}")
+                        
+                        # Check if alias/name matches
+                        elif entity_name:
+                            entity_name_normalized = entity_name.lower().replace(' ', '_').replace('-', '_')
+                            if (entity_name_normalized == automation_id_normalized or 
+                                automation_id_normalized in entity_name_normalized or
+                                entity_name_normalized in automation_id_normalized):
+                                try:
+                                    await ws_client.remove_entity_registry_entry(entity_id)
+                                    removed_entities.append(entity_id)
+                                    logger.info(f"Removed ghost automation from Entity Registry by alias: {entity_id} (name: {entity_name})")
+                                except Exception as e:
+                                    logger.warning(f"Failed to remove {entity_id}: {e}")
+                    
+                    if removed_entities:
+                        # Reload automations to sync Entity Registry
+                        try:
+                            await ws_client.call_service('automation', 'reload')
+                            logger.info(f"Reloaded automations after removing ghost entries")
+                        except Exception as reload_error:
+                            logger.warning(f"Failed to reload automations: {reload_error}")
+                        
+                        return {'success': True, 'automation_id': automation_id, 'removed_entities': removed_entities, 'message': f'Removed {len(removed_entities)} ghost automation(s) from Entity Registry'}
+                    else:
+                        raise Exception(f"Automation '{automation_id}' not found in storage and no matching entries found in Entity Registry")
+                except Exception as reg_error:
+                    logger.warning(f"Failed to remove ghost automation from Entity Registry: {reg_error}")
+                    raise Exception(f"Automation '{automation_id}' not found in storage and could not be removed from Entity Registry: {reg_error}")
             
             file_path = location['file_path']
             
@@ -806,20 +859,78 @@ class HomeAssistantClient:
                 new_content = json.dumps(storage_data, indent=2, ensure_ascii=False)
                 await file_manager.write_file(file_path, new_content, create_backup=True)
             
-            # Remove from Entity Registry
-            # Use actual entity_id from location if found, otherwise construct from automation_id
+            # Remove from Entity Registry - try to match by id, entity_id, and alias
             try:
                 from app.services.ha_websocket import get_ws_client
                 ws_client = await get_ws_client()
+                
+                # Get automation config to find alias
+                automation_config = None
+                try:
+                    automation_config = await self.get_automation(automation_id)
+                except Exception:
+                    pass
+                
+                # Get Entity Registry to find all matching automations
+                entity_registry = await ws_client.get_entity_registry()
+                automation_entities = [e for e in entity_registry if e.get('entity_id', '').startswith('automation.')]
+                
                 # Get actual entity_id from location if available
                 actual_entity_id = location.get('entity_id')
                 if actual_entity_id and actual_entity_id.startswith('automation.'):
-                    entity_id = actual_entity_id
+                    primary_entity_id = actual_entity_id
                 else:
                     # Fallback to constructing from automation_id
-                    entity_id = f"automation.{automation_id}"
-                await ws_client.remove_entity_registry_entry(entity_id)
-                logger.debug(f"Removed automation from Entity Registry: {entity_id}")
+                    primary_entity_id = f"automation.{automation_id}"
+                
+                # Get alias for matching
+                automation_alias = None
+                if automation_config:
+                    automation_alias = automation_config.get('alias', '')
+                
+                # Normalize for matching
+                automation_id_normalized = automation_id.lower().replace(' ', '_').replace('-', '_')
+                alias_normalized = automation_alias.lower().replace(' ', '_').replace('-', '_') if automation_alias else None
+                
+                removed_entities = []
+                for entity in automation_entities:
+                    entity_id = entity.get('entity_id', '')
+                    entity_name = entity.get('name', '')
+                    
+                    # Check if entity_id matches
+                    if (entity_id == primary_entity_id or 
+                        entity_id == f"automation.{automation_id}" or
+                        entity_id.replace('automation.', '', 1) == automation_id):
+                        try:
+                            await ws_client.remove_entity_registry_entry(entity_id)
+                            removed_entities.append(entity_id)
+                            logger.debug(f"Removed automation from Entity Registry by id: {entity_id}")
+                        except Exception as e:
+                            logger.warning(f"Failed to remove {entity_id}: {e}")
+                    
+                    # Check if alias/name matches
+                    elif entity_name and (alias_normalized or automation_id_normalized):
+                        entity_name_normalized = entity_name.lower().replace(' ', '_').replace('-', '_')
+                        if ((alias_normalized and (entity_name_normalized == alias_normalized or 
+                                                    alias_normalized in entity_name_normalized or
+                                                    entity_name_normalized in alias_normalized)) or
+                            (entity_name_normalized == automation_id_normalized or
+                             automation_id_normalized in entity_name_normalized or
+                             entity_name_normalized in automation_id_normalized)):
+                            try:
+                                await ws_client.remove_entity_registry_entry(entity_id)
+                                removed_entities.append(entity_id)
+                                logger.debug(f"Removed automation from Entity Registry by alias: {entity_id} (name: {entity_name})")
+                            except Exception as e:
+                                logger.warning(f"Failed to remove {entity_id}: {e}")
+                
+                if not removed_entities:
+                    # Fallback to primary entity_id if no matches found
+                    try:
+                        await ws_client.remove_entity_registry_entry(primary_entity_id)
+                        logger.debug(f"Removed automation from Entity Registry: {primary_entity_id}")
+                    except Exception as reg_error:
+                        logger.warning(f"Failed to remove automation from Entity Registry: {reg_error}")
             except Exception as reg_error:
                 logger.warning(f"Failed to remove automation from Entity Registry: {reg_error}")
             
