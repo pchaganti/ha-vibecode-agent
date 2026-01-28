@@ -781,7 +781,7 @@ class HomeAssistantClient:
                     ws_client = await get_ws_client()
                     
                     # Get Entity Registry to find automations by alias
-                    entity_registry = await ws_client.get_entity_registry()
+                    entity_registry = await ws_client.get_entity_registry_list()
                     automation_entities = [e for e in entity_registry if e.get('entity_id', '').startswith('automation.')]
                     
                     # Normalize automation_id for alias matching
@@ -872,7 +872,7 @@ class HomeAssistantClient:
                     pass
                 
                 # Get Entity Registry to find all matching automations
-                entity_registry = await ws_client.get_entity_registry()
+                entity_registry = await ws_client.get_entity_registry_list()
                 automation_entities = [e for e in entity_registry if e.get('entity_id', '').startswith('automation.')]
                 
                 # Get actual entity_id from location if available
