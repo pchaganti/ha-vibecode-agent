@@ -511,8 +511,34 @@ class HomeAssistantClient:
             except Exception:
                 pass
             
+            # Fallback: resolve slug via Entity Registry
+            # list_automations returns entity_id slugs (e.g. "toilet_cat_alert")
+            # but YAML entries use numeric IDs (e.g. "1668201968179")
+            try:
+                from app.services.ha_websocket import get_ws_client
+                ws_client = await get_ws_client()
+                entity_registry = await ws_client.get_entity_registry_list()
+
+                # Find entity matching this slug
+                target_entity_id = f"automation.{automation_id}" if not automation_id.startswith("automation.") else automation_id
+                for entity in entity_registry:
+                    if entity.get('entity_id') == target_entity_id:
+                        # Try capabilities.id (the actual config id)
+                        caps = entity.get('capabilities', {})
+                        real_id = caps.get('id') if isinstance(caps, dict) else None
+                        if real_id and real_id != automation_id:
+                            # Retry lookup with the resolved id
+                            return await self.get_automation(real_id)
+                        # Try unique_id
+                        unique_id = entity.get('unique_id')
+                        if unique_id and unique_id != automation_id:
+                            return await self.get_automation(unique_id)
+                        break
+            except Exception:
+                pass
+
             raise Exception(f"Automation not found: {automation_id}")
-            
+
         except Exception as e:
             error_msg = str(e)
             if 'not found' in error_msg.lower():
@@ -524,24 +550,27 @@ class HomeAssistantClient:
         """
         Create new automation via Home Assistant REST API
         
-        Uses POST /api/config/automation/config/{entity_id} endpoint.
+        Uses POST /api/config/automation/config/{automation_id} endpoint.
         Home Assistant automatically determines where to store the automation
         (automations.yaml, packages/*, or .storage).
-        
+
         Args:
             automation_config: Automation configuration dict (must include 'id')
-            
+
         Returns:
             Created automation configuration
         """
         automation_id = automation_config.get('id')
         if not automation_id:
             raise ValueError("Automation config must include 'id' field")
-        
+
         try:
-            # Use REST API endpoint: POST /api/config/automation/config/{entity_id}
-            entity_id = f"automation.{automation_id}"
-            endpoint = f"config/automation/config/{entity_id}"
+            # Strip prefix if caller passed entity_id format
+            if automation_id.startswith("automation."):
+                automation_id = automation_id.removeprefix("automation.")
+
+            # Use REST API endpoint: POST /api/config/automation/config/{automation_id}
+            endpoint = f"config/automation/config/{automation_id}"
             
             result = await self._request('POST', endpoint, data=automation_config)
             
@@ -557,51 +586,36 @@ class HomeAssistantClient:
     async def update_automation(self, automation_id: str, automation_config: Dict) -> Dict:
         """
         Update existing automation via Home Assistant REST API
-        
-        Uses POST /api/config/automation/config/{entity_id} endpoint.
+
+        Uses POST /api/config/automation/config/{automation_id} endpoint.
         Home Assistant automatically updates the automation in its original location.
-        
-        First tries to find the automation to get its actual entity_id (which may differ
-        from automation_id for UI-created automations).
-        
+
         Args:
-            automation_id: Automation ID (may be entity_id without 'automation.' prefix)
+            automation_id: Automation ID (plain ID like "office_desk_off")
             automation_config: Updated automation configuration
-            
+
         Returns:
             Updated automation configuration
         """
         try:
-            # First, try to get the automation to find its actual entity_id
-            # This handles cases where Entity Registry uses different entity_id than id
-            try:
-                existing_auto = await self.get_automation(automation_id)
-                # Use entity_id from existing automation if available
-                actual_entity_id = existing_auto.get('entity_id')
-                if actual_entity_id and actual_entity_id.startswith('automation.'):
-                    entity_id = actual_entity_id
-                else:
-                    # Fallback to constructing from automation_id
-                    entity_id = f"automation.{automation_id}"
-            except Exception:
-                # If get_automation fails, try to find location to get entity_id
-                location = await self._find_automation_location(automation_id)
-                if location and location.get('entity_id'):
-                    entity_id = location['entity_id']
-                else:
-                    # Fallback to constructing from automation_id
-                    entity_id = f"automation.{automation_id}"
-            
+            # Strip prefix if caller passed entity_id format
+            if automation_id.startswith("automation."):
+                automation_id = automation_id.removeprefix("automation.")
+
+            # Resolve slug to real config ID if needed
+            # (e.g. "toilet_cat_alert" -> "1668201968179")
+            resolved_id = await self._resolve_automation_id(automation_id)
+
             # Ensure 'id' matches
             config = dict(automation_config)
-            config['id'] = automation_id
-            
-            # Use REST API endpoint: POST /api/config/automation/config/{entity_id}
-            endpoint = f"config/automation/config/{entity_id}"
-            
+            config['id'] = resolved_id
+
+            # Use REST API endpoint: POST /api/config/automation/config/{automation_id}
+            endpoint = f"config/automation/config/{resolved_id}"
+
             result = await self._request('POST', endpoint, data=config)
-            
-            logger.info(f"Updated automation via REST API: {automation_id} (entity_id: {entity_id})")
+
+            logger.info(f"Updated automation via REST API: {resolved_id}")
             return result
         except Exception as e:
             error_msg = str(e)
@@ -610,6 +624,51 @@ class HomeAssistantClient:
             logger.error(f"Failed to update automation {automation_id} via REST API: {e}")
             raise
     
+    async def _resolve_automation_id(self, automation_id: str) -> str:
+        """
+        Resolve an entity slug to the actual config ID if they differ.
+
+        list_automations returns entity_id slugs (e.g. "toilet_cat_alert") but
+        the YAML config uses numeric IDs (e.g. "1668201968179"). The HA REST API
+        needs the config ID, not the slug.
+
+        Returns the resolved config ID, or the original automation_id if no
+        resolution is needed or possible.
+        """
+        # Quick check: if get_automation finds it, use the actual config ID from the result
+        try:
+            auto = await self.get_automation(automation_id)
+            config_id = auto.get('id', automation_id)
+            if config_id != automation_id:
+                logger.info(f"Resolved automation slug '{automation_id}' -> config id '{config_id}'")
+            return config_id
+        except Exception:
+            pass
+
+        # Fallback: resolve via Entity Registry
+        try:
+            from app.services.ha_websocket import get_ws_client
+            ws_client = await get_ws_client()
+            entity_registry = await ws_client.get_entity_registry_list()
+
+            target_entity_id = f"automation.{automation_id}"
+            for entity in entity_registry:
+                if entity.get('entity_id') == target_entity_id:
+                    caps = entity.get('capabilities', {})
+                    real_id = caps.get('id') if isinstance(caps, dict) else None
+                    if real_id and real_id != automation_id:
+                        logger.info(f"Resolved automation slug '{automation_id}' -> config id '{real_id}'")
+                        return real_id
+                    unique_id = entity.get('unique_id')
+                    if unique_id and unique_id != automation_id:
+                        logger.info(f"Resolved automation slug '{automation_id}' -> unique_id '{unique_id}'")
+                        return unique_id
+                    break
+        except Exception:
+            pass
+
+        return automation_id
+
     async def _find_automation_location(self, automation_id: str) -> Dict:
         """
         Find where an automation is stored (automations.yaml, packages/*.yaml, or .storage)

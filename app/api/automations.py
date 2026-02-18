@@ -190,7 +190,7 @@ async def update_automation(automation_id: str, automation: AutomationData, comm
     """
     Update existing automation via Home Assistant REST API
     
-    **Important:** This endpoint uses Home Assistant's REST API (POST /api/config/automation/config/{entity_id}).
+    **Important:** This endpoint uses Home Assistant's REST API (POST /api/config/automation/config/{automation_id}).
     Home Assistant automatically updates the automation in its original location.
     
     After update, the automation state is exported to Git for versioning.
