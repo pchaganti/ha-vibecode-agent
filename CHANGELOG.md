@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.10.37] - 2026-02-18
+
+### 🔧 Fix duplicate automations on create/update (thanks to @CrazyCoder, PR #25)
+
+- **Cause**: The HA REST API `POST /api/config/automation/config/{id}` expects a **plain config ID** (e.g. `morning_lights` or `1668201968179`). The code was passing `automation.{id}` (entity_id format), so HA did not find the existing automation and **appended a new one** instead of updating — resulting in duplicates.
+- **Slug resolution**: `list_automations` returns entity_id slugs (e.g. `motion_hallway_light`), while many UI automations use numeric config IDs internally. When the user or LLM passed a slug to `get_automation` / `update_automation`, the lookup failed. Added `_resolve_automation_id()` to resolve slugs to real config IDs via Entity Registry (`capabilities.id` or `unique_id`).
+- **Changes**: `create_automation` and `update_automation` now use the plain automation ID in the REST URL (strip `automation.` prefix). `update_automation` resolves the given id to the actual config ID before calling the API and sets `config['id'] = resolved_id` in the request body. `get_automation` has an Entity Registry fallback for slug lookups.
+- **Credit**: This fix was implemented in [PR #25](https://github.com/Coolver/home-assistant-vibecode-agent/pull/25) by [@CrazyCoder](https://github.com/CrazyCoder). Thank you for the clear analysis and patch.
+
 ## [2.10.36] - 2026-01-28
 
 ### 🔧 List automations: deduplicate and add `enabled` field
