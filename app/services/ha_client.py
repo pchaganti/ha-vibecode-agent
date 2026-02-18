@@ -524,24 +524,27 @@ class HomeAssistantClient:
         """
         Create new automation via Home Assistant REST API
         
-        Uses POST /api/config/automation/config/{entity_id} endpoint.
+        Uses POST /api/config/automation/config/{automation_id} endpoint.
         Home Assistant automatically determines where to store the automation
         (automations.yaml, packages/*, or .storage).
-        
+
         Args:
             automation_config: Automation configuration dict (must include 'id')
-            
+
         Returns:
             Created automation configuration
         """
         automation_id = automation_config.get('id')
         if not automation_id:
             raise ValueError("Automation config must include 'id' field")
-        
+
         try:
-            # Use REST API endpoint: POST /api/config/automation/config/{entity_id}
-            entity_id = f"automation.{automation_id}"
-            endpoint = f"config/automation/config/{entity_id}"
+            # Strip prefix if caller passed entity_id format
+            if automation_id.startswith("automation."):
+                automation_id = automation_id.removeprefix("automation.")
+
+            # Use REST API endpoint: POST /api/config/automation/config/{automation_id}
+            endpoint = f"config/automation/config/{automation_id}"
             
             result = await self._request('POST', endpoint, data=automation_config)
             
@@ -557,51 +560,32 @@ class HomeAssistantClient:
     async def update_automation(self, automation_id: str, automation_config: Dict) -> Dict:
         """
         Update existing automation via Home Assistant REST API
-        
-        Uses POST /api/config/automation/config/{entity_id} endpoint.
+
+        Uses POST /api/config/automation/config/{automation_id} endpoint.
         Home Assistant automatically updates the automation in its original location.
-        
-        First tries to find the automation to get its actual entity_id (which may differ
-        from automation_id for UI-created automations).
-        
+
         Args:
-            automation_id: Automation ID (may be entity_id without 'automation.' prefix)
+            automation_id: Automation ID (plain ID like "office_desk_off")
             automation_config: Updated automation configuration
-            
+
         Returns:
             Updated automation configuration
         """
         try:
-            # First, try to get the automation to find its actual entity_id
-            # This handles cases where Entity Registry uses different entity_id than id
-            try:
-                existing_auto = await self.get_automation(automation_id)
-                # Use entity_id from existing automation if available
-                actual_entity_id = existing_auto.get('entity_id')
-                if actual_entity_id and actual_entity_id.startswith('automation.'):
-                    entity_id = actual_entity_id
-                else:
-                    # Fallback to constructing from automation_id
-                    entity_id = f"automation.{automation_id}"
-            except Exception:
-                # If get_automation fails, try to find location to get entity_id
-                location = await self._find_automation_location(automation_id)
-                if location and location.get('entity_id'):
-                    entity_id = location['entity_id']
-                else:
-                    # Fallback to constructing from automation_id
-                    entity_id = f"automation.{automation_id}"
-            
+            # Strip prefix if caller passed entity_id format
+            if automation_id.startswith("automation."):
+                automation_id = automation_id.removeprefix("automation.")
+
             # Ensure 'id' matches
             config = dict(automation_config)
             config['id'] = automation_id
-            
-            # Use REST API endpoint: POST /api/config/automation/config/{entity_id}
-            endpoint = f"config/automation/config/{entity_id}"
-            
+
+            # Use REST API endpoint: POST /api/config/automation/config/{automation_id}
+            endpoint = f"config/automation/config/{automation_id}"
+
             result = await self._request('POST', endpoint, data=config)
-            
-            logger.info(f"Updated automation via REST API: {automation_id} (entity_id: {entity_id})")
+
+            logger.info(f"Updated automation via REST API: {automation_id}")
             return result
         except Exception as e:
             error_msg = str(e)
