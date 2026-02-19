@@ -1,5 +1,5 @@
 """Pydantic models for API"""
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 from typing import Optional, Dict, Any, List
 
 class FileContent(BaseModel):
@@ -28,15 +28,36 @@ class HelperCreate(BaseModel):
     commit_message: Optional[str] = Field(None, description="Custom commit message for Git backup (e.g., 'Add helper: climate system enabled switch')")
 
 class AutomationData(BaseModel):
-    """Automation data model"""
+    """Automation data model.
+
+    Accepts both HA legacy (trigger/condition/action) and modern
+    (triggers/conditions/actions) field names. Plural forms are
+    normalized to singular during validation.
+    """
     id: Optional[str] = None
     alias: str
     description: Optional[str] = None
-    trigger: List[Dict[str, Any]]
+    trigger: Optional[List[Dict[str, Any]]] = None
     condition: Optional[List[Dict[str, Any]]] = []
-    action: List[Dict[str, Any]]
+    action: Optional[List[Dict[str, Any]]] = None
+    triggers: Optional[List[Dict[str, Any]]] = Field(None, exclude=True)
+    conditions: Optional[List[Dict[str, Any]]] = Field(None, exclude=True)
+    actions: Optional[List[Dict[str, Any]]] = Field(None, exclude=True)
     mode: str = "single"
     commit_message: Optional[str] = Field(None, description="Custom commit message for Git backup (e.g., 'Add automation: motion sensor light control')")
+
+    @model_validator(mode='before')
+    @classmethod
+    def normalize_plural_fields(cls, data):
+        """Accept triggers/conditions/actions (plural) and map to singular."""
+        if isinstance(data, dict):
+            if 'triggers' in data and 'trigger' not in data:
+                data['trigger'] = data['triggers']
+            if 'conditions' in data and 'condition' not in data:
+                data['condition'] = data['conditions']
+            if 'actions' in data and 'action' not in data:
+                data['action'] = data['actions']
+        return data
 
 class ScriptData(BaseModel):
     """Script data model"""
