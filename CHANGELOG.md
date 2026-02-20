@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.10.38] - 2026-02-18
+
+### 🔧 Accept plural automation fields (thanks to @CrazyCoder, PR #26)
+
+- **Problem**: Home Assistant's modern automation UI and some exports use plural field names (`triggers`, `conditions`, `actions`) instead of the legacy singular (`trigger`, `condition`, `action`). The API only accepted the singular form, so payloads from the new UI or tools could be rejected.
+- **Solution**: `AutomationData` (create/update automation) now accepts **both** singular and plural field names. A Pydantic model validator normalizes plural → singular before validation, so the rest of the agent continues to work with the singular form. Plural fields are excluded from serialization to avoid duplication.
+- **Backward compatible**: Existing clients sending `trigger`/`condition`/`action` are unchanged. Clients sending `triggers`/`conditions`/`actions` are now supported.
+- **Credit**: Implemented in [PR #26](https://github.com/Coolver/home-assistant-vibecode-agent/pull/26) by [@CrazyCoder](https://github.com/CrazyCoder).
+
 ## [2.10.37] - 2026-02-18
 
 ### 🔧 Fix duplicate automations on create/update (thanks to @CrazyCoder, PR #25)
