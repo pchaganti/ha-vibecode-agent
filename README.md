@@ -1,6 +1,6 @@
 # HA Vibecode Agent - Home Assistant Add-on
 
-[![Version](https://img.shields.io/badge/version-2.10.40-blue.svg)](https://github.com/Coolver/home-assistant-vibecode-agent)
+[![Version](https://img.shields.io/badge/version-2.10.42-blue.svg)](https://github.com/Coolver/home-assistant-vibecode-agent)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![MCP Package](https://img.shields.io/npm/v/@coolver/home-assistant-mcp?label=MCP%20Package)](https://www.npmjs.com/package/@coolver/home-assistant-mcp)
 
@@ -485,7 +485,7 @@ AI via Agent:
 
 This error means Node.js is not installed or not found in your system PATH.
 
-Solution: Install Node.js (v18.0.0 or higher) on the computer where Cursor is running:
+Solution: Install Node.js (v20.0.0 or higher; Node.js 24 LTS recommended) on the computer where Cursor is running:
 
 Download and install Node.js from https://nodejs.org
 Restart Cursor completely after installation
