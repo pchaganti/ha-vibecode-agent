@@ -91,12 +91,15 @@ class HAWebSocketClient:
         while self._running:
             try:
                 await self._connect_and_listen()
+                # Clean exit (server closed connection) — brief pause before reconnect
+                if self._running:
+                    await asyncio.sleep(1.0)
             except asyncio.CancelledError:
                 break
             except Exception as e:
                 logger.error(f"WebSocket connection error: {e}")
                 self._connected = False
-                
+
                 if self._running:
                     # Exponential backoff
                     logger.info(f"Reconnecting in {self._reconnect_delay} seconds...")
@@ -155,7 +158,14 @@ class HAWebSocketClient:
                 elif msg.type == aiohttp.WSMsgType.ERROR:
                     logger.error(f"WebSocket error: {ws.exception()}")
                     break
-            
+
+            # Fail all in-flight requests immediately instead of letting them
+            # wait 30s for a response that will never arrive
+            for msg_id, future in list(self.pending_requests.items()):
+                if not future.done():
+                    future.set_exception(ConnectionError("WebSocket disconnected"))
+            self.pending_requests.clear()
+
             self._connected = False
     
     async def _handle_message(self, data: dict):
@@ -376,11 +386,11 @@ class HAWebSocketClient:
     async def get_entity_registry_list(self) -> list:
         """
         Get all entities from Entity Registry
-        
+
         Returns:
             List of entity registry entries with metadata (area_id, device_id, name, etc.)
         """
-        result = await self._send_message({'type': 'config/entity_registry/list'})
+        result = await self._send_message({'type': 'config/entity_registry/list'}, timeout=90.0)
         return result or []
     
     async def get_entity_registry_entry(self, entity_id: str) -> dict:
@@ -628,11 +638,11 @@ class HAWebSocketClient:
     async def get_device_registry_list(self) -> list:
         """
         Get all devices from Device Registry
-        
+
         Returns:
             List of device registry entries
         """
-        result = await self._send_message({'type': 'config/device_registry/list'})
+        result = await self._send_message({'type': 'config/device_registry/list'}, timeout=90.0)
         return result or []
     
     async def get_device_registry_entry(self, device_id: str) -> dict:
@@ -751,11 +761,11 @@ async def get_ws_client() -> HAWebSocketClient:
         raise Exception("WebSocket client not initialized")
     
     if not ha_ws_client.is_connected:
-        # Try to wait for connection
+        # Wait for reconnect — 5s is too short during exponential backoff
         try:
-            await ha_ws_client.wait_for_connection(timeout=5.0)
+            await ha_ws_client.wait_for_connection(timeout=30.0)
         except TimeoutError:
-            raise Exception("WebSocket not connected. Agent may still be starting up.")
+            raise Exception("WebSocket not connected after 30s. HA may be restarting.")
     
     return ha_ws_client
 
