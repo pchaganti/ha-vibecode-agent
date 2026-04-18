@@ -68,6 +68,21 @@ env = {{
   }}
 }}'''
     
+    # Google Antigravity (Gemini) — same mcpServers JSON; stored under ~/.gemini/antigravity/mcp_config.json
+    # See https://antigravity.google/docs/mcp
+    antigravity_json_config = f'''{{
+  "mcpServers": {{
+    "home-assistant": {{
+      "command": "npx",
+      "args": ["-y", "@coolver/home-assistant-mcp@latest"],
+      "env": {{
+        "HA_AGENT_URL": "http://homeassistant.local:8099",
+        "HA_AGENT_KEY": "{api_key}"
+      }}
+    }}
+  }}
+}}'''
+    
     # Load Jinja2 template
     template_path = Path(__file__).parent / 'templates' / 'ingress_panel.html'
     template_content = template_path.read_text(encoding='utf-8')
@@ -80,7 +95,8 @@ env = {{
         cursor_json_config=cursor_json_config,
         claude_json_config=claude_json_config,
         vscode_json_config=vscode_json_config,
-        vscode_codex_toml_config=vscode_codex_toml_config
+        vscode_codex_toml_config=vscode_codex_toml_config,
+        antigravity_json_config=antigravity_json_config,
     )
     
     return html

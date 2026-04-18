@@ -53,6 +53,17 @@ class HAWebSocketClient:
         """Check if WebSocket is connected"""
         return self._connected and self.ws is not None and not self.ws.closed
     
+    def _fail_pending_requests_on_disconnect(self) -> None:
+        """Fail in-flight request futures immediately when the socket is gone."""
+        if not self.pending_requests:
+            return
+        err = ConnectionError("WebSocket disconnected")
+        pending = list(self.pending_requests.items())
+        self.pending_requests.clear()
+        for _msg_id, future in pending:
+            if not future.done():
+                future.set_exception(err)
+    
     async def start(self):
         """Start WebSocket client in background"""
         if self._running:
@@ -114,59 +125,51 @@ class HAWebSocketClient:
         if self.session is None or self.session.closed:
             self.session = aiohttp.ClientSession()
         
-        async with self.session.ws_connect(self.url) as ws:
-            self.ws = ws
-            
-            # Step 1: Receive auth_required
-            msg = await ws.receive_json()
-            if msg.get('type') != 'auth_required':
-                raise Exception(f"Expected auth_required, got: {msg.get('type')}")
-            
-            logger.debug("Received auth_required, sending auth...")
-            
-            # Step 2: Send auth
-            await ws.send_json({
-                'type': 'auth',
-                'access_token': self.token
-            })
-            
-            # Step 3: Receive auth_ok or auth_invalid
-            auth_response = await ws.receive_json()
-            if auth_response.get('type') == 'auth_invalid':
-                raise Exception(f"Authentication failed: {auth_response.get('message')}")
-            
-            if auth_response.get('type') != 'auth_ok':
-                raise Exception(f"Unexpected auth response: {auth_response}")
-            
-            logger.info("✅ WebSocket connected and authenticated")
-            self._connected = True
-            self._reconnect_delay = 1  # Reset backoff on successful connect
-            
-            # Step 4: Listen for messages
-            async for msg in ws:
-                if msg.type == aiohttp.WSMsgType.TEXT:
-                    try:
-                        data = json.loads(msg.data)
-                        await self._handle_message(data)
-                    except json.JSONDecodeError as e:
-                        logger.error(f"Failed to parse WebSocket message: {e}")
+        try:
+            async with self.session.ws_connect(self.url) as ws:
+                self.ws = ws
                 
-                elif msg.type == aiohttp.WSMsgType.CLOSED:
-                    logger.warning("WebSocket closed by server")
-                    break
+                # Step 1: Receive auth_required
+                msg = await ws.receive_json()
+                if msg.get('type') != 'auth_required':
+                    raise Exception(f"Expected auth_required, got: {msg.get('type')}")
                 
-                elif msg.type == aiohttp.WSMsgType.ERROR:
-                    logger.error(f"WebSocket error: {ws.exception()}")
-                    break
-
-            # Fail all in-flight requests immediately instead of letting them
-            # wait 30s for a response that will never arrive
-            for msg_id, future in list(self.pending_requests.items()):
-                if not future.done():
-                    future.set_exception(ConnectionError("WebSocket disconnected"))
-            self.pending_requests.clear()
-
+                logger.debug("Received auth_required, sending auth...")
+                
+                await ws.send_json({
+                    'type': 'auth',
+                    'access_token': self.token
+                })
+                
+                auth_response = await ws.receive_json()
+                if auth_response.get('type') == 'auth_invalid':
+                    raise Exception(f"Authentication failed: {auth_response.get('message')}")
+                
+                if auth_response.get('type') != 'auth_ok':
+                    raise Exception(f"Unexpected auth response: {auth_response}")
+                
+                logger.info("✅ WebSocket connected and authenticated")
+                self._connected = True
+                self._reconnect_delay = 1  # Reset backoff on successful connect
+                
+                async for msg in ws:
+                    if msg.type == aiohttp.WSMsgType.TEXT:
+                        try:
+                            data = json.loads(msg.data)
+                            await self._handle_message(data)
+                        except json.JSONDecodeError as e:
+                            logger.error(f"Failed to parse WebSocket message: {e}")
+                    
+                    elif msg.type == aiohttp.WSMsgType.CLOSED:
+                        logger.warning("WebSocket closed by server")
+                        break
+                    
+                    elif msg.type == aiohttp.WSMsgType.ERROR:
+                        logger.error(f"WebSocket error: {ws.exception()}")
+                        break
+        finally:
             self._connected = False
+            self._fail_pending_requests_on_disconnect()
     
     async def _handle_message(self, data: dict):
         """Handle incoming WebSocket message"""

@@ -1,8 +1,8 @@
 ARG BUILD_FROM
 FROM ${BUILD_FROM}
 
-# Version: 2.3.12 - Force rebuild for repository parsing fix
-# Build timestamp: 2025-11-09 15:25:00 UTC
+# Version: 2.10.44 - WebSocket disconnect / reconnect resilience (see CHANGELOG)
+# Build timestamp: 2026-04-17
 # Install system dependencies
 RUN apk add --no-cache \
     git \

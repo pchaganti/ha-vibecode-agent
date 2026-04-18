@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.10.44] - 2026-04-17
+
+**Thanks:** [Chris Lennon](https://github.com/chrislennon) for the Home Assistant WebSocket resilience work shipped in [PR #38](https://github.com/Coolver/home-assistant-vibecode-agent/pull/38). [SpryNM](https://github.com/sprynm) for practical feedback that improved the **Codex** setup steps in the ingress UI (aligned with [OpenAI’s Codex MCP guide](https://developers.openai.com/codex/mcp/)).
+
+### Steadier connection when Home Assistant restarts or the network blips
+
+If Home Assistant restarted, the watchdog kicked in, or the network dropped for a moment, the agent could leave a lot of work waiting a long time for answers that would never come—so you saw long stretches of timeout noise even after things were fine again. It also sometimes gave up waiting for the link to come back a little too eagerly. This release smooths that out: work in flight is cleared promptly when the link drops, reconnects pause briefly instead of hammering the server, the agent waits longer for a healthy connection before reporting “not connected,” and very large registry exports get more headroom on busy but healthy systems.
+
+### Setup panel (ingress UI)
+
+- **Codex:** Explains that the shared config file may not exist yet; adds a one-line `codex mcp add …` option with a copy button; points to official MCP documentation.
+- **Antigravity (Gemini):** New tab (after Cursor) with install notes, config path under `.gemini`, and merge guidance.
+- **Tabs:** Claude Code stays the default first tab; Cursor second; Antigravity follows Cursor.
+
 ## [2.10.42] - 2026-04-10
 
 **Release prepared with thanks to:** [@ctaylor86](https://github.com/ctaylor86), [@johny-mnemonic](https://github.com/johny-mnemonic), and [@wilsto](https://github.com/wilsto).
