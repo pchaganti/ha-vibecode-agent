@@ -14,13 +14,15 @@ logger = logging.getLogger('ha_cursor_agent')
 async def list_calendars():
     """List all calendar entities."""
     try:
-        result = await ha_client._request('GET', 'calendars')
+        result = await ha_client._request('GET', 'calendars', suppress_404_logging=True)
         return {
             "success": True,
             "count": len(result) if isinstance(result, list) else 0,
             "calendars": result
         }
     except Exception as e:
+        if "404" in str(e):
+            return {"success": True, "count": 0, "calendars": [], "note": "No calendar integrations configured"}
         logger.error(f"Failed to list calendars: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -61,7 +63,7 @@ async def list_todos(
     try:
         result = await ha_client._request(
             'GET',
-            f'/api/states/{entity_id}'
+            f'states/{entity_id}'
         )
 
         items = []
