@@ -2,7 +2,7 @@
 from fastapi import APIRouter, HTTPException, Query, Body
 from typing import Optional, List
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from app.services.ha_client import ha_client
 
@@ -14,7 +14,7 @@ logger = logging.getLogger('ha_cursor_agent')
 async def list_calendars():
     """List all calendar entities."""
     try:
-        result = await ha_client._request('GET', '/api/calendars')
+        result = await ha_client._request('GET', 'calendars')
         return {
             "success": True,
             "count": len(result) if isinstance(result, list) else 0,
@@ -33,12 +33,12 @@ async def get_calendar_events(
 ):
     """Get events from a calendar entity."""
     try:
-        start_time = start or datetime.utcnow().isoformat()
-        end_time = end or (datetime.utcnow() + timedelta(days=7)).isoformat()
+        start_time = start or datetime.now(timezone.utc).isoformat()
+        end_time = end or (datetime.now(timezone.utc) + timedelta(days=7)).isoformat()
 
         result = await ha_client._request(
             'GET',
-            f'/api/calendars/{entity_id}',
+            f'calendars/{entity_id}',
             params={"start": start_time, "end": end_time}
         )
 

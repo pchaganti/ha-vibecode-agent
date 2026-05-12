@@ -2,9 +2,10 @@
 from fastapi import APIRouter, HTTPException, Query
 from typing import Optional
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from app.services.ha_client import ha_client
+from app.services.ha_websocket import get_ws_client
 
 router = APIRouter()
 logger = logging.getLogger('ha_cursor_agent')
@@ -19,13 +20,15 @@ async def get_history(
 ):
     """Get state history for an entity over a time period."""
     try:
-        params = {"filter_entity_id": entity_id, "minimal_response": minimal_response}
+        params = {"filter_entity_id": entity_id}
+        if minimal_response:
+            params["minimal_response"] = ""
         if end:
             params["end_time"] = end
 
-        start_time = start or (datetime.utcnow() - timedelta(hours=24)).isoformat()
+        start_time = start or (datetime.now(timezone.utc) - timedelta(hours=24)).isoformat()
 
-        result = await ha_client._request('GET', f'/api/history/period/{start_time}', params=params)
+        result = await ha_client._request('GET', f'history/period/{start_time}', params=params)
 
         history = result[0] if isinstance(result, list) and len(result) > 0 else []
 
@@ -49,18 +52,17 @@ async def get_statistics(
 ):
     """Get long-term statistics for an entity (energy, temperature trends, etc.)."""
     try:
-        params = {
-            "statistic_ids": entity_id,
-            "period": period,
-        }
-        if start:
-            params["start_time"] = start
-        else:
-            params["start_time"] = (datetime.utcnow() - timedelta(days=7)).isoformat()
-        if end:
-            params["end_time"] = end
+        start_time = start or (datetime.now(timezone.utc) - timedelta(days=7)).isoformat()
+        end_time = end or datetime.now(timezone.utc).isoformat()
 
-        result = await ha_client._request('GET', '/api/history/statistics', params=params)
+        ws_client = await get_ws_client()
+        result = await ws_client._send_message({
+            "type": "recorder/statistics_during_period",
+            "start_time": start_time,
+            "end_time": end_time,
+            "statistic_ids": [entity_id],
+            "period": period,
+        })
 
         statistics = result.get(entity_id, []) if isinstance(result, dict) else result
 

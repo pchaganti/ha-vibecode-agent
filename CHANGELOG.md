@@ -2,9 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
-## [2.10.45] - 2026-05-12
+## [2.10.46] - 2026-05-12
 
-**Pair with MCP client 3.2.29+.**
+**Pair with MCP client 3.2.30+.**
 
 ### Run anywhere — no HAOS required
 

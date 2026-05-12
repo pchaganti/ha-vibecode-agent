@@ -3,7 +3,7 @@ from fastapi import APIRouter, HTTPException, Query, Body
 from typing import Optional
 import logging
 
-from app.services.ha_client import ha_client
+from app.services.ha_websocket import get_ws_client
 
 router = APIRouter()
 logger = logging.getLogger('ha_cursor_agent')
@@ -15,7 +15,11 @@ async def list_blueprints(
 ):
     """List available blueprints."""
     try:
-        result = await ha_client._request('GET', f'/api/config/{domain}/config/blueprints')
+        ws_client = await get_ws_client()
+        result = await ws_client._send_message({
+            "type": "blueprint/list",
+            "domain": domain,
+        })
 
         blueprints = []
         if isinstance(result, dict):
@@ -46,7 +50,11 @@ async def import_blueprint(
 ):
     """Import a blueprint from a URL."""
     try:
-        result = await ha_client._request('POST', '/api/config/blueprint/import', data={"url": url})
+        ws_client = await get_ws_client()
+        result = await ws_client._send_message({
+            "type": "blueprint/import",
+            "url": url,
+        })
         logger.info(f"Blueprint imported from: {url}")
         return {
             "success": True,

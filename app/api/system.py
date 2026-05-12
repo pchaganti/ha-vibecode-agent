@@ -135,7 +135,7 @@ async def get_repairs():
     Settings -> System -> Repairs in the HA UI.
     """
     try:
-        result = await ha_client._request('GET', '/api/repairs/issues')
+        result = await ha_client._request('GET', 'repairs/issues')
         issues = result.get('issues', result) if isinstance(result, dict) else result
         return {
             "success": True,
