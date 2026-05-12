@@ -1,0 +1,233 @@
+---
+const title = "Setup Wizard — HA Vibecode Agent";
+---
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{title}</title>
+  <style>
+    :root {
+      --bg: #0f1117;
+      --surface: #1a1d27;
+      --border: #2a2d37;
+      --text: #e1e4ea;
+      --text-secondary: #8b8f9a;
+      --accent: #4f9cf7;
+      --accent-hover: #3b8ae6;
+      --success: #4caf50;
+      --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      --mono: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: var(--font); background: var(--bg); color: var(--text); min-height: 100vh; padding: 2rem; }
+    .container { max-width: 720px; margin: 0 auto; }
+    h1 { font-size: 1.8rem; margin-bottom: 0.5rem; }
+    .subtitle { color: var(--text-secondary); margin-bottom: 2rem; }
+    .step { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 1.5rem; margin-bottom: 1.5rem; }
+    .step-header { font-size: 1.1rem; font-weight: 600; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.75rem; }
+    .step-num { background: var(--accent); color: #fff; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.85rem; font-weight: 700; flex-shrink: 0; }
+    label { display: block; font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 0.4rem; }
+    select, input { width: 100%; padding: 0.6rem 0.8rem; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; color: var(--text); font-size: 0.95rem; font-family: var(--font); margin-bottom: 1rem; }
+    select:focus, input:focus { outline: none; border-color: var(--accent); }
+    .output { background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 1rem; font-family: var(--mono); font-size: 0.82rem; white-space: pre-wrap; word-break: break-all; line-height: 1.5; position: relative; max-height: 400px; overflow-y: auto; }
+    .copy-btn { position: absolute; top: 0.5rem; right: 0.5rem; background: var(--accent); color: #fff; border: none; padding: 0.4rem 0.8rem; border-radius: 4px; cursor: pointer; font-size: 0.8rem; }
+    .copy-btn:hover { background: var(--accent-hover); }
+    .copy-btn.copied { background: var(--success); }
+    .note { font-size: 0.85rem; color: var(--text-secondary); margin-top: 0.5rem; }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+    @media (max-width: 600px) { .grid-2 { grid-template-columns: 1fr; } }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .back { display: inline-block; margin-bottom: 1.5rem; font-size: 0.9rem; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <a class="back" href="./">&larr; Back to Home</a>
+    <h1>Setup Wizard</h1>
+    <p class="subtitle">Generate the MCP configuration for your IDE in 3 steps.</p>
+
+    <div class="step">
+      <div class="step-header"><span class="step-num">1</span> Choose your IDE</div>
+      <select id="ide">
+        <option value="cursor">Cursor</option>
+        <option value="vscode">VS Code (Continue / Copilot)</option>
+        <option value="claude-code">Claude Code</option>
+        <option value="codex">OpenAI Codex CLI</option>
+        <option value="windsurf">Windsurf</option>
+        <option value="gemini">Gemini CLI</option>
+        <option value="claude-desktop">Claude Desktop</option>
+        <option value="cline">Cline</option>
+        <option value="roo-code">Roo Code</option>
+        <option value="other">Other MCP Client</option>
+      </select>
+    </div>
+
+    <div class="step">
+      <div class="step-header"><span class="step-num">2</span> Enter your connection details</div>
+      <div class="grid-2">
+        <div>
+          <label for="host">Agent Host</label>
+          <input id="host" type="text" value="homeassistant.local" placeholder="IP or hostname" />
+        </div>
+        <div>
+          <label for="port">Port</label>
+          <input id="port" type="text" value="8099" />
+        </div>
+      </div>
+      <label for="key">API Key</label>
+      <input id="key" type="text" placeholder="Paste your API key here" />
+      <p class="note">Find your API key: Add-on Web UI or <code>/config/.ha_cursor_agent_key</code></p>
+    </div>
+
+    <div class="step">
+      <div class="step-header"><span class="step-num">3</span> Copy your configuration</div>
+      <div style="position: relative;">
+        <div class="output" id="output"></div>
+        <button class="copy-btn" id="copyBtn" onclick="copyConfig()">Copy</button>
+      </div>
+      <p class="note" id="instructions"></p>
+    </div>
+  </div>
+
+  <script>
+    function generate() {
+      const ide = document.getElementById('ide').value;
+      const host = document.getElementById('host').value || 'homeassistant.local';
+      const port = document.getElementById('port').value || '8099';
+      const key = document.getElementById('key').value || 'YOUR_API_KEY';
+      const url = `http://${host}:${port}`;
+      const output = document.getElementById('output');
+      const instructions = document.getElementById('instructions');
+
+      let config = '';
+      let note = '';
+
+      if (ide === 'cursor') {
+        config = JSON.stringify({
+          "mcpServers": {
+            "home-assistant": {
+              "command": "npx",
+              "args": ["-y", "@coolver/home-assistant-mcp@latest"],
+              "env": {
+                "HA_AGENT_URL": url,
+                "HA_AGENT_KEY": key
+              }
+            }
+          }
+        }, null, 2);
+        note = 'Add to: Cursor Settings → MCP → Add Server → paste JSON, or save to .cursor/mcp.json in your project.';
+      } else if (ide === 'vscode') {
+        config = JSON.stringify({
+          "mcp": {
+            "servers": {
+              "home-assistant": {
+                "command": "npx",
+                "args": ["-y", "@coolver/home-assistant-mcp@latest"],
+                "env": {
+                  "HA_AGENT_URL": url,
+                  "HA_AGENT_KEY": key
+                }
+              }
+            }
+          }
+        }, null, 2);
+        note = 'Add to: .vscode/settings.json in your project, or user settings.json.';
+      } else if (ide === 'claude-code') {
+        config = `claude mcp add home-assistant \\\n  -e HA_AGENT_URL="${url}" \\\n  -e HA_AGENT_KEY="${key}" \\\n  -- npx -y @coolver/home-assistant-mcp@latest`;
+        note = 'Run this command in your terminal to add the MCP server to Claude Code.';
+      } else if (ide === 'codex') {
+        config = `codex mcp add home-assistant \\\n  --env HA_AGENT_URL=${url} \\\n  --env HA_AGENT_KEY=${key} \\\n  -- npx -y @coolver/home-assistant-mcp@latest`;
+        note = 'Run this command in your terminal to add the MCP server to Codex CLI.';
+      } else if (ide === 'windsurf') {
+        config = JSON.stringify({
+          "mcpServers": {
+            "home-assistant": {
+              "command": "npx",
+              "args": ["-y", "@coolver/home-assistant-mcp@latest"],
+              "env": {
+                "HA_AGENT_URL": url,
+                "HA_AGENT_KEY": key
+              }
+            }
+          }
+        }, null, 2);
+        note = 'Add to: Windsurf Settings → MCP → Configure, or ~/.codeium/windsurf/mcp_config.json';
+      } else if (ide === 'gemini') {
+        config = JSON.stringify({
+          "mcpServers": {
+            "home-assistant": {
+              "command": "npx",
+              "args": ["-y", "@coolver/home-assistant-mcp@latest"],
+              "env": {
+                "HA_AGENT_URL": url,
+                "HA_AGENT_KEY": key
+              }
+            }
+          }
+        }, null, 2);
+        note = 'Save to: ~/.gemini/settings.json';
+      } else if (ide === 'claude-desktop') {
+        config = JSON.stringify({
+          "mcpServers": {
+            "home-assistant": {
+              "command": "npx",
+              "args": ["-y", "@coolver/home-assistant-mcp@latest"],
+              "env": {
+                "HA_AGENT_URL": url,
+                "HA_AGENT_KEY": key
+              }
+            }
+          }
+        }, null, 2);
+        note = 'Save to: ~/Library/Application Support/Claude/claude_desktop_config.json (macOS) or %APPDATA%\\Claude\\claude_desktop_config.json (Windows)';
+      } else if (ide === 'cline' || ide === 'roo-code') {
+        config = JSON.stringify({
+          "mcpServers": {
+            "home-assistant": {
+              "command": "npx",
+              "args": ["-y", "@coolver/home-assistant-mcp@latest"],
+              "env": {
+                "HA_AGENT_URL": url,
+                "HA_AGENT_KEY": key
+              }
+            }
+          }
+        }, null, 2);
+        note = `Open ${ide === 'cline' ? 'Cline' : 'Roo Code'} settings in VS Code → MCP Servers → Add manually.`;
+      } else {
+        config = JSON.stringify({
+          "command": "npx",
+          "args": ["-y", "@coolver/home-assistant-mcp@latest"],
+          "env": {
+            "HA_AGENT_URL": url,
+            "HA_AGENT_KEY": key
+          }
+        }, null, 2);
+        note = 'Generic MCP server config. Adapt to your client\'s configuration format.';
+      }
+
+      output.textContent = config;
+      instructions.textContent = note;
+    }
+
+    function copyConfig() {
+      const text = document.getElementById('output').textContent;
+      navigator.clipboard.writeText(text).then(() => {
+        const btn = document.getElementById('copyBtn');
+        btn.textContent = 'Copied!';
+        btn.classList.add('copied');
+        setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 2000);
+      });
+    }
+
+    document.getElementById('ide').addEventListener('change', generate);
+    document.getElementById('host').addEventListener('input', generate);
+    document.getElementById('port').addEventListener('input', generate);
+    document.getElementById('key').addEventListener('input', generate);
+
+    generate();
+  </script>
+</body>
+</html>

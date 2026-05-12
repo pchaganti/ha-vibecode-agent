@@ -1,10 +1,12 @@
 """Entities API endpoints"""
+import asyncio
 from fastapi import APIRouter, HTTPException, Query, Body
 from typing import List, Optional, Dict, Any
 import logging
 import math
 import json
 
+from rapidfuzz import fuzz, process as fuzz_process
 from app.services.ha_client import ha_client
 
 router = APIRouter()
@@ -28,6 +30,17 @@ def _parse_dict_like(value: Any) -> Optional[Dict[str, Any]]:
 async def list_entities(
     domain: Optional[str] = Query(None, description="Filter by domain (e.g., 'sensor', 'climate')"),
     search: Optional[str] = Query(None, description="Search in entity_id or friendly_name"),
+    fuzzy: bool = Query(
+        False,
+        description="If true, use fuzzy matching for search (tolerates typos like 'bedrrom' -> 'bedroom'). "
+                    "Returns results sorted by relevance score.",
+    ),
+    fuzzy_threshold: int = Query(
+        60,
+        ge=0,
+        le=100,
+        description="Minimum fuzzy match score (0-100). Default 60. Only used when fuzzy=true.",
+    ),
     page: int = Query(1, ge=1, description="Page number (1-based)"),
     page_size: int = Query(
         250,
@@ -73,13 +86,27 @@ async def list_entities(
         
         # Search by entity_id or friendly_name
         if search:
-            search_lower = search.lower()
-            states = [
-                s
-                for s in states
-                if search_lower in s['entity_id'].lower()
-                or search_lower in s.get('attributes', {}).get('friendly_name', '').lower()
-            ]
+            if fuzzy:
+                scored = []
+                for s in states:
+                    entity_id = s['entity_id']
+                    friendly_name = s.get('attributes', {}).get('friendly_name', '')
+                    score = max(
+                        fuzz.partial_ratio(search.lower(), entity_id.lower()),
+                        fuzz.partial_ratio(search.lower(), friendly_name.lower()),
+                    )
+                    if score >= fuzzy_threshold:
+                        scored.append((s, score))
+                scored.sort(key=lambda x: x[1], reverse=True)
+                states = [s for s, _ in scored]
+            else:
+                search_lower = search.lower()
+                states = [
+                    s
+                    for s in states
+                    if search_lower in s['entity_id'].lower()
+                    or search_lower in s.get('attributes', {}).get('friendly_name', '').lower()
+                ]
         
         total = len(states)
         if total == 0:
@@ -224,6 +251,8 @@ async def call_service(
     service_data: Optional[Any] = Body(None, description="Service data (e.g., {'entity_id': 'number.alex_trv_local_temperature_offset', 'value': -2.0})"),
     target: Optional[Any] = Body(None, description="Target entity/entities (e.g., {'entity_id': 'light.living_room'})"),
     data_alias: Optional[Any] = Body(None, alias="data", description="Backward-compatible alias for service_data"),
+    wait_for_state: Optional[str] = Body(None, description="If set, poll the target entity until it reaches this state (e.g., 'on', 'off', '21.0')"),
+    wait_timeout: float = Body(10.0, description="Max seconds to wait for state change (default 10). Only used with wait_for_state."),
 ):
     """
     Call a Home Assistant service
@@ -232,6 +261,7 @@ async def call_service(
     - Set number value: {"domain": "number", "service": "set_value", "service_data": {"entity_id": "number.alex_trv_local_temperature_offset", "value": -2.0}}
     - Turn on light: {"domain": "light", "service": "turn_on", "target": {"entity_id": "light.living_room"}}
     - Set climate temperature: {"domain": "climate", "service": "set_temperature", "target": {"entity_id": "climate.bedroom_trv_thermostat"}, "service_data": {"temperature": 21.0}}
+    - Turn on and wait: {"domain": "light", "service": "turn_on", "target": {"entity_id": "light.living_room"}, "wait_for_state": "on"}
     """
     try:
         service_data = _parse_dict_like(service_data)
@@ -242,31 +272,56 @@ async def call_service(
         target = _parse_dict_like(target)
 
         # Combine service_data and target into data dict
-        # In Home Assistant API, target is merged with service_data
         data = {}
         if service_data:
             data.update(service_data)
         if target:
-            # Merge target fields into data (e.g., entity_id from target)
             if 'entity_id' in target:
                 data['entity_id'] = target['entity_id']
             if 'area_id' in target:
                 data['area_id'] = target['area_id']
             if 'device_id' in target:
                 data['device_id'] = target['device_id']
-            # Also keep target for services that need it
             if not any(k in data for k in ['entity_id', 'area_id', 'device_id']):
                 data['target'] = target
         
         result = await ha_client.call_service(domain, service, data)
         logger.info(f"Service called: {domain}.{service}")
-        return {
+
+        response = {
             "success": True,
             "domain": domain,
             "service": service,
             "data": data,
             "result": result
         }
+
+        # Poll for expected state if requested
+        if wait_for_state and data.get('entity_id'):
+            entity_id = data['entity_id']
+            poll_interval = 0.5
+            elapsed = 0.0
+            state_reached = False
+
+            while elapsed < wait_timeout:
+                await asyncio.sleep(poll_interval)
+                elapsed += poll_interval
+                try:
+                    state_obj = await ha_client.get_state(entity_id)
+                    current_state = state_obj.get('state', '') if isinstance(state_obj, dict) else ''
+                    if str(current_state).lower() == str(wait_for_state).lower():
+                        state_reached = True
+                        break
+                except Exception:
+                    pass
+
+            response["wait_for_state"] = {
+                "expected": wait_for_state,
+                "reached": state_reached,
+                "elapsed_seconds": round(elapsed, 1),
+            }
+
+        return response
     except Exception as e:
         logger.error(f"Failed to call service {domain}.{service}: {e}")
         raise HTTPException(status_code=500, detail=f"Service call failed: {str(e)}")

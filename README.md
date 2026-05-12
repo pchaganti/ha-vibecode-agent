@@ -1,6 +1,6 @@
-# HA Vibecode Agent - Home Assistant Add-on
+# HA Vibecode Agent
 
-[![Version](https://img.shields.io/badge/version-2.10.44-blue.svg)](https://github.com/Coolver/home-assistant-vibecode-agent)
+[![Version](https://img.shields.io/badge/version-2.10.45-blue.svg)](https://github.com/Coolver/home-assistant-vibecode-agent)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![MCP Package](https://img.shields.io/npm/v/@coolver/home-assistant-mcp?label=MCP%20Package)](https://www.npmjs.com/package/@coolver/home-assistant-mcp)
 
@@ -10,11 +10,11 @@ You describe your goal → AI inspects your Home Assistant → designs a custom 
 
 And if you prefer to handcraft your automations and scripts yourself, the agent can simply act as your DevOps and extra pair of hands: quickly uploading your changes, running tests, and analyzing logs on demand. **You stay in control and decide how much you delegate to AI and how deep it should go.**
 
-Transform the way you manage your smart home. This add-on enables **Cursor**, **Visual Studio Code (VS Code)**, or any **MCP-enabled IDE** to:
+Transform the way you manage your smart home. This agent enables **Claude Code**, **Cursor**, **Visual Studio Code (VS Code)**, or any **MCP-enabled IDE** to:
 
 - 📝 Analyze your Home Assistant configuration, entities, and devices  
 - 🏗️ Create intelligent automations, scripts, and complete systems — including Home Assistant helpers that can be fully managed programmatically  
-- 🎨 Design and customize Lovelace dashboards with full control over cards, layouts, and styling  
+- 🎨 Design and customize UI dashboards with full control over cards, layouts, and styling  
 - 🖌️ Create and tweak themes for a personalized UI  
 - 🔄 Safely deploy changes with automatic Git-based versioning  
 - 🔍 Monitor and troubleshoot your setup through log analysis  
@@ -33,7 +33,16 @@ https://github.com/user-attachments/assets/0df48019-06c0-48dd-82ad-c7fe0734ddb3
 
 ## 🎯 What is this?
 
-**HA Vibecode Agent** is a Home Assistant add-on that exposes a safe on-board REST API and toolset, allowing AI assistants (Cursor, VS Code, Claude, Continue, and any MCP-enabled IDE) to work *with* your Home Assistant instead of just generating YAML in the dark.
+**HA Vibecode Agent** is a service that exposes a safe REST API and toolset, allowing AI assistants (Cursor, VS Code, Claude, Continue, and any MCP-enabled IDE) to work *with* your Home Assistant instead of just generating YAML in the dark.
+
+It supports two deployment modes:
+
+| Mode | For whom | How it runs |
+|------|----------|-------------|
+| **Supervisor (Add-on)** | Home Assistant OS / Supervised | Installed via HA Add-on Store (default) |
+| **Standalone (Docker)** | HA Container in Docker / Proxmox / NAS | Runs as a separate Docker container |
+
+Both modes provide the same core functionality. The only difference: **Add-on management** (install/uninstall/restart add-ons) requires the Supervisor and is not available in standalone mode.
 
 ---
 
@@ -88,9 +97,9 @@ You describe your goal → AI inspects your Home Assistant → designs a custom 
 
 ### 🚀 How is this different from other MCP modules for Home Assistant?
 
-Most MCP integrations I’ve seen for Cursor, VS Code or Claude work only on your local machine and talk to Home Assistant over SSH and sometimes the REST API.
+Most MCP integrations I've seen for Claude, Cursor, VS Code or Antigravity work only on your local machine and talk to Home Assistant over SSH and sometimes the REST API.
 
-For serious Home Assistant work, that’s not really enough:
+For serious Home Assistant work, that's not really enough:
 
 Home Assistant is not just a bunch of YAML files.
 It exposes multiple internal APIs, and some of the most important ones are only available from inside HA itself over the WebSocket API.
@@ -102,7 +111,7 @@ Because of that, I chose a different architecture.
 
 This project is **split into two modules**:
 
-**Home Assistant Agent** (this module) – runs inside Home Assistant (as an add-on),
+**Home Assistant Agent** (this module) – runs inside (or alongside) Home Assistant,
 has native access to all relevant APIs, files and services,
 and exposes a safe, well-defined interface for external tools.
 
@@ -166,7 +175,7 @@ Your AI IDE gets exactly the actions and data it needs — through a stable API 
 - Health check endpoint
 - System monitoring and analysis
 
-### 🔌 Add-on Management
+### 🔌 Add-on Management *(Supervisor mode only)*
 **Complete add-on lifecycle management – install, configure, and control services!**
 - Install/uninstall add-ons (Zigbee2MQTT, Node-RED, ESPHome, etc.)
 - Configure add-on options
@@ -186,9 +195,15 @@ Your AI IDE gets exactly the actions and data it needs — through a stable API 
 
 ---
 
-## ⚡ Quick Start (5 minutes)
+## ⚡ Installation
 
-### 1. Add Repository
+### Option A: Home Assistant Add-on (default, recommended)
+
+**For users running Home Assistant OS or Supervised installation.**
+
+This is the standard deployment — the agent runs as a managed add-on inside Home Assistant with full access to Supervisor API.
+
+#### 1. Add Repository
 
 Open your **Home Assistant UI** (usually http://homeassistant.local:8123):
 
@@ -196,7 +211,7 @@ Open your **Home Assistant UI** (usually http://homeassistant.local:8123):
 2. Add: `https://github.com/coolver/home-assistant-vibecode-agent`
 3. Click **Add**
 
-### 2. Install and Start Add-on
+#### 2. Install and Start Add-on
 
 Still in **Home Assistant UI**:
 
@@ -213,18 +228,93 @@ You'll see this interface:
   <img src=".github/images/ingress-panel.jpg" alt="HA Vibecode Agent Ingress Panel" width="700">
 </p>
 
-7. Click the **Cursor** or **VS Code** tab (depending on which IDE you want to use with Home Assistant) and **follow the setup instructions**. You’ll need to install and configure Cursor or VS Code so they can connect to the HA Agent via the MCP protocol.
+7. Click the **Cursor** or **VS Code** tab (depending on which IDE you want to use with Home Assistant) and **follow the setup instructions**. You'll need to install and configure Cursor or VS Code so they can connect to the HA Agent via the MCP protocol.
 
-8. That’s it — **you’re ready to start** working with your Home Assistant scripts, automations and dashboards using AI.
+8. That's it — **you're ready to start** working with your Home Assistant scripts, automations and dashboards using AI.
+
 If you find this project useful and want to support its development, **please consider giving it a [GitHub Star](https://github.com/Coolver/home-assistant-vibecode-agent) ⭐**
 
 [YouTube Installation guide: how to install the Home Assistant Cursor Agent](https://youtu.be/RZNkNZnhMrc)
 
 ---
 
+### Option B: Standalone Docker (Proxmox / Docker / NAS)
+
+**For users running Home Assistant Container without Supervisor** (e.g., in Proxmox LXC/VM, Synology NAS, or plain Docker Compose).
+
+The agent runs as a separate Docker container alongside your Home Assistant instance and connects via a Long-Lived Access Token.
+
+#### Prerequisites
+
+- Home Assistant running and accessible over the network
+- **Long-Lived Access Token** — create one in HA UI: **Profile** (bottom-left) → **Long-Lived Access Tokens** → **Create Token**
+- Docker and Docker Compose installed on the host
+
+#### 1. Clone the repository
+
+```bash
+git clone https://github.com/Coolver/home-assistant-vibecode-agent.git
+cd home-assistant-vibecode-agent
+```
+
+#### 2. Configure environment
+
+```bash
+cp .env.example .env
+```
+
+Edit `.env` with your values:
+
+```env
+HA_URL=http://192.168.1.100:8123
+HA_TOKEN=your_long_lived_access_token_here
+HA_CONFIG_PATH=/path/to/homeassistant/config
+```
+
+#### 3. Start the agent
+
+```bash
+docker compose -f docker-compose.standalone.yml up -d
+```
+
+#### 4. Get the API key
+
+The agent auto-generates an API key on first start. View it in the logs:
+
+```bash
+docker compose -f docker-compose.standalone.yml logs | grep "API Key"
+```
+
+Or read it directly from the config directory:
+
+```bash
+cat /path/to/homeassistant/config/.ha_cursor_agent_key
+```
+
+#### 5. Configure your IDE
+
+The agent is now available at `http://<host-ip>:8099`. Configure your MCP client (Cursor, VS Code, etc.) to connect using the API key from step 4.
+
+#### Feature availability in standalone mode
+
+| Feature | Standalone | Add-on |
+|---------|:----------:|:------:|
+| File management (read/write/list) | ✅ | ✅ |
+| Automations (CRUD) | ✅ | ✅ |
+| Scripts (CRUD) | ✅ | ✅ |
+| Dashboards & themes | ✅ | ✅ |
+| Entities & states | ✅ | ✅ |
+| Helpers | ✅ | ✅ |
+| Git versioning & rollback | ✅ | ✅ |
+| HACS management (WebSocket) | ✅ | ✅ |
+| System logs & logbook | ✅ | ✅ |
+| **Add-on management** | ❌ | ✅ |
+
+---
+
 ## 🤖 Using with AI IDE (Cursor, VS Code etc)
 
-This add-on enables **AI IDE to autonomously manage your Home Assistant** through natural language - no manual copy-pasting needed!
+This agent enables **AI IDE to autonomously manage your Home Assistant** through natural language - no manual copy-pasting needed!
 
 ### ⚠️ Important Disclaimer
 
@@ -294,7 +384,7 @@ find the problem, and fix it.
 
 ### What Vibecode Agent Can Do
 
-With this add-on and [MCP integration](https://github.com/Coolver/home-assistant-mcp), AI IDE can:
+With this agent and [MCP integration](https://github.com/Coolver/home-assistant-mcp), AI IDE can:
 
 ✅ **Analyze YOUR configuration** - detects your actual devices and entities  
 ✅ **Create complex systems autonomously** - 10+ interconnected automations  
@@ -395,7 +485,7 @@ For detailed contribution guidelines, see **[CONTRIBUTING.md](CONTRIBUTING.md)**
 
 ### For Cursor AI, VS Code + Co-Pilot etc
 
-This add-on enables Cursor AI to:
+This agent enables Cursor AI to:
 
 1. **Autonomously install systems** - AI reads current config, creates all components, tests
 2. **Debug issues** - AI reads logs, configs, entity states, fixes problems
@@ -502,10 +592,19 @@ Common issues:
 - Invalid configuration
 - Missing permissions
 
+### Standalone container won't start
+
+**Check logs:** `docker compose -f docker-compose.standalone.yml logs`
+
+Common issues:
+- `HA_URL` not set or unreachable
+- `HA_TOKEN` invalid or expired — regenerate in HA UI → Profile → Long-Lived Access Tokens
+- Config volume not mounted correctly — verify `HA_CONFIG_PATH` in `.env`
+
 ### API returns 401 Unauthorized
 
 - Check Agent Key is correct
-- Regenerate key if needed: Settings → Add-ons → HA Vibecode Agent → Open Web UI
+- Regenerate key if needed: Settings → Add-ons → HA Vibecode Agent → Open Web UI (add-on mode), or read from `/config/.ha_cursor_agent_key` (standalone mode)
 - Ensure Authorization header is present
 - Format: `Authorization: Bearer YOUR_AGENT_KEY`
 
@@ -536,4 +635,3 @@ MIT License - See LICENSE file
 ---
 
 **Ready to give your AI full control of Home Assistant? Install now!** 🚀
-

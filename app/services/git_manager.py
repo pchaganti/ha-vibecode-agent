@@ -1,5 +1,6 @@
 """Git versioning manager"""
 import os
+import asyncio
 import git
 from pathlib import Path
 from datetime import datetime
@@ -30,6 +31,7 @@ class GitManager:
         logger.info(f"GitManager initialized: max_backups={self.max_backups}, auto={self.git_versioning_auto}")
         self.repo = None
         self.processing_request = False  # Flag to disable auto-commits during request processing
+        self._git_lock = asyncio.Lock()  # Prevent concurrent git operations
         
         # Always initialize shadow repo (Git is always enabled)
         self._init_repo()
@@ -477,9 +479,14 @@ secrets.yaml
             logger.debug("Skipping auto-commit - request processing in progress")
             return None
         
+        async with self._git_lock:
+            return await self._commit_changes_locked(message, force)
+
+    async def _commit_changes_locked(self, message: str = None, force: bool = False) -> Optional[str]:
+        """Internal commit logic, must be called under _git_lock."""
         try:
             # First, synchronize filtered files from /config into the shadow repo
-            self._sync_config_to_shadow()
+            await asyncio.to_thread(self._sync_config_to_shadow)
 
             # Check if there are changes (only for tracked files and config files)
             if not self.repo.is_dirty(untracked_files=True):
@@ -580,7 +587,7 @@ secrets.yaml
             if not commit_hash:
                 try:
                     commit_hash = self.repo.head.commit.hexsha[:8]
-                except:
+                except Exception:
                     commit_hash = None
             
             # Create tag with timestamp and description
@@ -906,7 +913,7 @@ secrets.yaml
                 rev_list_output = self.repo.git.rev_list('--count', '--first-parent', 'HEAD')
                 commits_after = int(rev_list_output.strip())
                 logger.info(f"Final commit count: {commits_after}")
-            except:
+            except Exception:
                 commits_after = commits_to_keep_count
             
             logger.info(f"✅ Automatic cleanup complete: {total_commits} → {commits_after} commits. Removed {total_commits - commits_after} old commits.")
@@ -937,8 +944,7 @@ secrets.yaml
             }
         
         try:
-            commits = list(self.repo.iter_commits())
-            total_commits = len(commits)
+            total_commits = int(self.repo.git.rev_list('--count', '--first-parent', 'HEAD').strip())
             
             if total_commits <= self.max_backups:
                 # Still clean up backup branches if requested
@@ -1008,7 +1014,7 @@ secrets.yaml
                     logger.warning(f"Cherry-pick failed for {commit.hexsha[:8]}: {cp_error}")
                     try:
                         self.repo.git.cherry_pick('--abort')
-                    except:
+                    except Exception:
                         pass
                     # Continue with next commit
             
@@ -1031,7 +1037,7 @@ secrets.yaml
                 self.repo.git.prune('--expire=now')
             
             # Count commits in current branch only (not all commits in repo)
-            commits_after = len(list(self.repo.iter_commits(current_branch)))
+            commits_after = int(self.repo.git.rev_list('--count', '--first-parent', current_branch).strip())
             
             logger.info(f"✅ Manual cleanup complete: {total_commits} → {commits_after} commits. Removed {total_commits - commits_after} old commits.")
             if delete_backup_branches and deleted_branches > 0:
@@ -1125,7 +1131,7 @@ secrets.yaml
         
         try:
             # Sync current state from /config to shadow repo
-            self._sync_config_to_shadow()
+            await asyncio.to_thread(self._sync_config_to_shadow)
             
             # Get status of changes
             status_output = self.repo.git.status('--porcelain')
@@ -1268,7 +1274,7 @@ secrets.yaml
             
             # Sync full state from shadow repo back into /config, removing
             # files that are no longer present in the selected commit.
-            self._sync_shadow_to_config(only_paths=None, delete_missing=True)
+            await asyncio.to_thread(self._sync_shadow_to_config, None, True)
             
             logger.info(f"Rolled back to commit: {commit_hash}")
             
@@ -1418,9 +1424,10 @@ secrets.yaml
                 logger.info(f"Restored {len(restored_files)} files in shadow repo from commit {commit_hash}")
             
             # Sync restored files from shadow repo back into /config
-            self._sync_shadow_to_config(
-                only_paths=restored_files if file_patterns else None,
-                delete_missing=False
+            await asyncio.to_thread(
+                self._sync_shadow_to_config,
+                restored_files if file_patterns else None,
+                False
             )
             
             return {

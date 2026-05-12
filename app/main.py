@@ -12,7 +12,7 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, HTMLResponse
 
-from app.api import files, entities, helpers, automations, scripts, system, backup, logs, logbook, ai_instructions, hacs, addons, lovelace, themes, registries
+from app.api import files, entities, helpers, automations, scripts, system, backup, logs, logbook, ai_instructions, hacs, addons, lovelace, themes, registries, history, blueprints, calendar, zones, snapshot
 from app.utils.logger import setup_logger
 from app.ingress_panel import generate_ingress_html
 from app.services import ha_websocket
@@ -26,7 +26,7 @@ LOG_LEVEL = os.getenv('LOG_LEVEL', 'info').upper()
 logger = setup_logger('ha_cursor_agent', LOG_LEVEL)
 
 # Agent version
-AGENT_VERSION = "2.10.44"
+AGENT_VERSION = "2.10.45"
 
 # FastAPI app
 app = FastAPI(
@@ -52,7 +52,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Track MCP client versions (to avoid logging on every request)
+# Track MCP client versions (to avoid logging on every request) — bounded to prevent memory leak
+_MCP_CLIENTS_MAX = 256
 mcp_clients_logged = set()
 
 # Middleware to log MCP client version
@@ -62,22 +63,34 @@ async def log_mcp_client_version(request: Request, call_next):
     mcp_version = request.headers.get('x-mcp-client-version')
     client_id = request.client.host if request.client else 'unknown'
     
-    # Log only once per client
+    # Log only once per client (clear when set grows too large)
     if mcp_version and client_id not in mcp_clients_logged:
+        if len(mcp_clients_logged) >= _MCP_CLIENTS_MAX:
+            mcp_clients_logged.clear()
         mcp_clients_logged.add(client_id)
-        logger.info(f"🔌 MCP Client connected: v{mcp_version} from {client_id}")
+        logger.info(f"MCP Client connected: v{mcp_version} from {client_id}")
     
     response = await call_next(request)
     return response
 
 # Get tokens and configuration from environment
 SUPERVISOR_TOKEN = os.getenv('SUPERVISOR_TOKEN', '')  # Auto-provided by HA when running as add-on
+HA_TOKEN = os.getenv('HA_TOKEN', '')  # Long-Lived Access Token for standalone mode
 DEV_TOKEN = os.getenv('HA_AGENT_KEY', '')  # For local development only
 HA_URL = os.getenv('HA_URL', 'http://supervisor/core')
 
+# Runtime mode detection
+if SUPERVISOR_TOKEN:
+    RUNTIME_MODE = "supervisor"
+elif HA_TOKEN:
+    RUNTIME_MODE = "standalone"
+else:
+    RUNTIME_MODE = "dev"
+
 # API Key configuration
 API_KEY_FROM_CONFIG = os.getenv('API_KEY', '').strip()
-API_KEY_FILE = Path('/config/.ha_cursor_agent_key')
+CONFIG_PATH = os.getenv('CONFIG_PATH', '/config')
+API_KEY_FILE = Path(f'{CONFIG_PATH}/.ha_cursor_agent_key')
 
 # Global variable for API key
 API_KEY = None
@@ -139,18 +152,24 @@ API_KEY = get_or_generate_api_key()
 set_api_key(API_KEY)  # Set API key in auth module
 
 # Log startup configuration
-supervisor_token_status = "PRESENT" if SUPERVISOR_TOKEN else "MISSING"
-dev_token_status = "PRESENT" if DEV_TOKEN else "MISSING"
+MODE_LABELS = {
+    "supervisor": "Supervisor (Add-on)",
+    "standalone": "Standalone (Docker)",
+    "dev": "Development (local)",
+}
 
 logger.info(f"=================================")
 logger.info(f"HA Vibecode Agent v{AGENT_VERSION}")
+logger.info(f"Mode: {MODE_LABELS[RUNTIME_MODE]}")
 logger.info(f"=================================")
-logger.info(f"SUPERVISOR_TOKEN: {supervisor_token_status}")
-if SUPERVISOR_TOKEN:
-    logger.info(f"Mode: Add-on (using SUPERVISOR_TOKEN for HA API)")
+if RUNTIME_MODE == "supervisor":
+    logger.info(f"Token: SUPERVISOR_TOKEN")
+elif RUNTIME_MODE == "standalone":
+    logger.info(f"Token: HA_TOKEN (Long-Lived Access Token)")
+    logger.info(f"Add-on management: disabled (no Supervisor)")
 else:
-    logger.info(f"DEV_TOKEN (for local dev): {dev_token_status}")
-    logger.info(f"Mode: Development (using DEV_TOKEN)")
+    logger.info(f"Token: HA_AGENT_KEY (dev)")
+    logger.info(f"Add-on management: disabled (no Supervisor)")
 logger.info(f"HA_URL: {HA_URL}")
 logger.info(f"API Key (for MCP client): {'Custom (from config)' if API_KEY_FROM_CONFIG else 'Auto-generated'}")
 logger.info(f"=================================")
@@ -161,30 +180,38 @@ logger.info(f"=================================")
 async def startup_event():
     """Initialize WebSocket client and Supervisor client on startup"""
     # Initialize Supervisor client (for add-on management)
-    if SUPERVISOR_TOKEN:
+    if RUNTIME_MODE == "supervisor":
         from app.services.supervisor_client import supervisor_client
         logger.info(f"✅ SupervisorClient ready - URL: {supervisor_client.base_url}")
     
-    # Only start WebSocket if we have SUPERVISOR_TOKEN (running as add-on)
-    if SUPERVISOR_TOKEN:
+    # Start WebSocket with available token (Supervisor or Long-Lived Access Token)
+    ws_token = SUPERVISOR_TOKEN or HA_TOKEN
+    if ws_token:
         logger.info("Initializing WebSocket client...")
         ha_websocket.ha_ws_client = ha_websocket.HAWebSocketClient(
             url=HA_URL,
-            token=SUPERVISOR_TOKEN
+            token=ws_token
         )
         await ha_websocket.ha_ws_client.start()
         logger.info("✅ WebSocket client started in background")
     else:
-        logger.warning("⚠️ WebSocket client disabled (no SUPERVISOR_TOKEN - dev mode)")
+        logger.warning("⚠️ WebSocket client disabled (no token available)")
 
 
 @app.on_event("shutdown")
 async def shutdown_event():
-    """Stop WebSocket client on shutdown"""
+    """Stop WebSocket client and close HTTP sessions on shutdown"""
     if ha_websocket.ha_ws_client:
         logger.info("Stopping WebSocket client...")
         await ha_websocket.ha_ws_client.stop()
-        logger.info("✅ WebSocket client stopped")
+        logger.info("WebSocket client stopped")
+    
+    # Close shared HTTP sessions
+    from app.services.ha_client import ha_client
+    from app.services.supervisor_client import supervisor_client
+    await ha_client.close()
+    await supervisor_client.close()
+    logger.info("HTTP sessions closed")
 
 
 
@@ -204,6 +231,11 @@ app.include_router(addons.router, prefix="/api/addons", tags=["Add-ons"])
 app.include_router(lovelace.router, prefix="/api/lovelace", tags=["Lovelace"], dependencies=[Depends(verify_token)])
 app.include_router(themes.router, prefix="/api/themes", tags=["Themes"], dependencies=[Depends(verify_token)])
 app.include_router(registries.router, prefix="/api/registries", tags=["Registries"], dependencies=[Depends(verify_token)])
+app.include_router(history.router, prefix="/api/history", tags=["History"], dependencies=[Depends(verify_token)])
+app.include_router(blueprints.router, prefix="/api/blueprints", tags=["Blueprints"], dependencies=[Depends(verify_token)])
+app.include_router(calendar.router, prefix="/api/calendar", tags=["Calendar"], dependencies=[Depends(verify_token)])
+app.include_router(zones.router, prefix="/api/zones", tags=["Zones"], dependencies=[Depends(verify_token)])
+app.include_router(snapshot.router, prefix="/api/snapshot", tags=["Snapshot"], dependencies=[Depends(verify_token)])
 app.include_router(ai_instructions.router, prefix="/api/ai")
 
 

@@ -3,6 +3,7 @@ from fastapi import APIRouter, HTTPException, Query
 import logging
 import os
 import yaml
+import aiofiles
 from typing import Dict, Any, Optional
 
 from app.models.schemas import HelperCreate, Response
@@ -35,48 +36,47 @@ HELPER_FILES = {
 }
 
 
-def _load_helper_file(domain: str) -> Dict[str, Any]:
+async def _load_helper_file(domain: str) -> Dict[str, Any]:
     """Load helper file for specific domain"""
     file_path = HELPER_FILES.get(domain)
     if not file_path or not os.path.exists(file_path):
         return {}
     
-    with open(file_path, 'r') as f:
-        content = yaml.safe_load(f) or {}
-    return content
+    async with aiofiles.open(file_path, 'r') as f:
+        raw = await f.read()
+    return yaml.safe_load(raw) or {}
 
 
-def _save_helper_file(domain: str, data: Dict[str, Any]) -> None:
+async def _save_helper_file(domain: str, data: Dict[str, Any]) -> None:
     """Save helper file for specific domain"""
     file_path = HELPER_FILES.get(domain)
     if not file_path:
         raise ValueError(f"Unknown domain: {domain}")
     
-    with open(file_path, 'w') as f:
-        yaml.dump(data, f, default_flow_style=False, allow_unicode=True, sort_keys=False)
+    content = yaml.dump(data, default_flow_style=False, allow_unicode=True, sort_keys=False)
+    async with aiofiles.open(file_path, 'w') as f:
+        await f.write(content)
     logger.info(f"Saved {file_path}")
 
 
-def _ensure_domain_in_config(domain: str) -> None:
+async def _ensure_domain_in_config(domain: str) -> None:
     """Ensure helper domain is included in configuration.yaml"""
     if not os.path.exists(CONFIG_FILE):
         logger.warning(f"{CONFIG_FILE} not found")
         return
     
-    with open(CONFIG_FILE, 'r') as f:
-        config_content = f.read()
+    async with aiofiles.open(CONFIG_FILE, 'r') as f:
+        config_content = await f.read()
     
-    file_name = HELPER_FILES[domain].split('/')[-1]  # Get filename without path
+    file_name = HELPER_FILES[domain].split('/')[-1]
     include_line = f"{domain}: !include {file_name}"
     
-    # Check if already includes this domain
     if include_line in config_content:
         logger.info(f"{domain} already referenced in configuration.yaml")
         return
     
-    # Add reference at the end
-    with open(CONFIG_FILE, 'a') as f:
-        f.write(f'\n{include_line}\n')
+    async with aiofiles.open(CONFIG_FILE, 'a') as f:
+        await f.write(f'\n{include_line}\n')
     
     logger.info(f"Added {domain} reference to configuration.yaml")
 
@@ -252,7 +252,7 @@ async def create_helper(helper: HelperCreate):
         helper_name = helper.config['name']
         
         # Load existing helpers for this domain
-        domain_helpers = _load_helper_file(helper.type)
+        domain_helpers = await _load_helper_file(helper.type)
         
         # Generate entity_id
         entity_id = _generate_entity_id(helper.type, helper_name, domain_helpers)
@@ -265,10 +265,10 @@ async def create_helper(helper: HelperCreate):
         domain_helpers[entity_id] = config_without_name
         
         # Save domain file
-        _save_helper_file(helper.type, domain_helpers)
+        await _save_helper_file(helper.type, domain_helpers)
         
         # Ensure domain is included in configuration.yaml
-        _ensure_domain_in_config(helper.type)
+        await _ensure_domain_in_config(helper.type)
         
         # Reload the specific helper domain
         ws_client = await get_ws_client()
@@ -325,11 +325,11 @@ async def delete_helper(entity_id: str, commit_message: Optional[str] = Query(No
         
         # Try to delete from YAML first
         try:
-            domain_helpers = _load_helper_file(domain)
+            domain_helpers = await _load_helper_file(domain)
             if helper_id in domain_helpers:
                 # Remove helper from YAML
                 del domain_helpers[helper_id]
-                _save_helper_file(domain, domain_helpers)
+                await _save_helper_file(domain, domain_helpers)
                 
                 # Reload the specific helper domain
                 ws_client = await get_ws_client()
@@ -541,7 +541,7 @@ async def delete_helper(entity_id: str, commit_message: Optional[str] = Query(No
                 state = await ha_client.get_state(entity_id, suppress_404_logging=True)
                 if state:
                     helper_exists = True
-            except:
+            except Exception:
                 pass
             
             if helper_exists:

@@ -1,0 +1,937 @@
+---
+const title = "HA Vibecode Agent";
+const description = "AI-Powered Home Assistant Management — the only HA agent that runs inside your Home Assistant.";
+const base = "/home-assistant-vibecode-agent";
+---
+
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content={description} />
+  <title>{title}</title>
+  <link rel="icon" type="image/svg+xml" href={`${base}/favicon.svg`} />
+</head>
+<body>
+
+  <!-- NAV -->
+  <nav class="nav">
+    <div class="container nav-inner">
+      <a href={base} class="nav-brand">HA Vibecode Agent</a>
+      <div class="nav-links">
+        <a href="#features">Features</a>
+        <a href="#installation">Installation</a>
+        <a href="#faq">FAQ</a>
+        <a href="https://github.com/coolver/home-assistant-vibecode-agent" target="_blank" rel="noopener">GitHub</a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- HERO -->
+  <section class="hero">
+    <div class="container">
+      <h1 class="hero-title">HA Vibecode Agent</h1>
+      <p class="hero-subtitle">AI-Powered Home Assistant Management</p>
+      <p class="hero-desc">Create and debug automations, design dashboards, tweak themes, modify configs, and deploy changes &mdash; using natural language.</p>
+      <div class="hero-buttons">
+        <a href="#installation" class="btn btn-primary">Get Started</a>
+        <a href="https://github.com/coolver/home-assistant-vibecode-agent" target="_blank" rel="noopener" class="btn btn-secondary">GitHub</a>
+      </div>
+      <div class="hero-stats">
+        <span class="stat-badge">78+ Tools</span>
+        <span class="stat-badge">v2.10.45</span>
+        <span class="stat-badge">MIT License</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- CORE PRINCIPLES -->
+  <section class="section" id="why">
+    <div class="container">
+      <h2 class="section-title">Safe Home Assistant Development with AI</h2>
+      <p class="section-subtitle">The only HA agent that runs inside your Home Assistant. Full API access. Git versioning. Zero SSH hacks.</p>
+      <div class="grid-3">
+        <div class="card">
+          <div class="card-icon">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+          </div>
+          <h3>Runs Inside Home Assistant</h3>
+          <ul>
+            <li>Direct API access to all HA services</li>
+            <li>No SSH tunnel or port forwarding</li>
+            <li>WebSocket connection for real-time updates</li>
+            <li>Path-validated file operations</li>
+          </ul>
+        </div>
+        <div class="card">
+          <div class="card-icon">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><line x1="1.05" y1="12" x2="7" y2="12"/><line x1="17.01" y1="12" x2="22.96" y2="12"/><line x1="12" y1="1.05" x2="12" y2="7"/><line x1="12" y1="17.01" x2="12" y2="22.96"/></svg>
+          </div>
+          <h3>Every Change Is Versioned</h3>
+          <ul>
+            <li>Every edit automatically committed to Git</li>
+            <li>AI-generated commit messages</li>
+            <li>One-command rollback to any state</li>
+            <li>Full change history and audit trail</li>
+          </ul>
+        </div>
+        <div class="card">
+          <div class="card-icon">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+          </div>
+          <h3>Works with Your IDE</h3>
+          <ul>
+            <li>Claude Code, Cursor, VS Code, Windsurf</li>
+            <li>Standard MCP protocol</li>
+            <li>Autonomous multi-step operations</li>
+            <li>Context-aware tool selection</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- HOW IT WORKS -->
+  <section class="section section-alt" id="architecture">
+    <div class="container">
+      <h2 class="section-title">How It Works</h2>
+      <div class="arch-stack">
+
+        <div class="arch-row arch-row-dim">
+          <div class="arch-label">
+            <span class="arch-label-tag arch-tag-old">Traditional</span>
+            <span class="arch-label-text">SSH into HA, edit YAML in terminal, hope nothing breaks, no undo</span>
+          </div>
+          <div class="arch-flow">
+            <div class="arch-node">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+              <span>Terminal</span>
+            </div>
+            <span class="arch-arrow">&rarr;</span>
+            <div class="arch-node">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+              <span>SSH</span>
+            </div>
+            <span class="arch-arrow">&rarr;</span>
+            <div class="arch-node">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+              <span>Edit YAML</span>
+            </div>
+            <span class="arch-arrow">&rarr;</span>
+            <div class="arch-node">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+              <span>Home Assistant</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="arch-row arch-row-glow">
+          <div class="arch-label">
+            <span class="arch-label-tag arch-tag-new">Vibecode Agent</span>
+            <span class="arch-label-text">AI manages your HA from the IDE &mdash; versioned, validated, rollback-safe</span>
+          </div>
+          <div class="arch-flow">
+            <div class="arch-node arch-node-accent">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+              <span>AI IDE</span>
+            </div>
+            <span class="arch-arrow arch-arrow-glow">&rarr;</span>
+            <div class="arch-node arch-node-accent">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+              <span>MCP</span>
+            </div>
+            <span class="arch-arrow arch-arrow-glow">&rarr;</span>
+            <div class="arch-node arch-node-highlight">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+              <span>Agent + Git</span>
+            </div>
+            <span class="arch-arrow arch-arrow-glow">&rarr;</span>
+            <div class="arch-node arch-node-accent">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+              <span>Home Assistant</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- FEATURES -->
+  <section class="section" id="features">
+    <div class="container">
+      <h2 class="section-title">Features</h2>
+      <div class="grid-3">
+        <div class="feature-card">
+          <div class="feature-icon">&#128193;</div>
+          <h3>File Management</h3>
+          <p>Read, write, and manage configuration files with path validation and automatic backups.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">&#9881;</div>
+          <h3>Automations &amp; Scripts</h3>
+          <p>Create, edit, and debug automations and scripts with full YAML validation.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">&#127912;</div>
+          <h3>Dashboards &amp; Themes</h3>
+          <p>Design Lovelace dashboards and custom themes through natural language.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">&#128196;</div>
+          <h3>Git Versioning &amp; Rollback</h3>
+          <p>Every change tracked in Git with AI-generated commit messages and instant rollback.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">&#128230;</div>
+          <h3>HACS &amp; Add-ons</h3>
+          <p>Install and manage HACS integrations and Home Assistant add-ons programmatically.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">&#128200;</div>
+          <h3>System &amp; Monitoring</h3>
+          <p>Monitor system health, check logs, manage backups, and restart services.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">&#128161;</div>
+          <h3>Entity Management</h3>
+          <p>Query, control, and organize entities, devices, and areas across your smart home.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">&#128197;</div>
+          <h3>Calendar &amp; Todo</h3>
+          <p>Manage calendar events and todo lists directly through the agent interface.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">&#128736;</div>
+          <h3>Blueprints</h3>
+          <p>Import, export, and manage automation blueprints from the community and your own library.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- INSTALLATION -->
+  <section class="section section-alt" id="installation">
+    <div class="container">
+      <h2 class="section-title">Installation</h2>
+      <div class="tabs">
+        <div class="tab-buttons">
+          <button class="tab-btn active" data-tab="addon">Add-on (HAOS)</button>
+          <button class="tab-btn" data-tab="docker">Docker (Standalone)</button>
+        </div>
+        <div class="tab-panel active" id="tab-addon">
+          <div class="step">
+            <h4>Step 1 &mdash; Add the repository</h4>
+            <p>Open Home Assistant &rarr; Settings &rarr; Add-ons &rarr; Add-on Store &rarr; Repositories, then add:</p>
+            <pre><code>https://github.com/coolver/home-assistant-vibecode-agent</code></pre>
+          </div>
+          <div class="step">
+            <h4>Step 2 &mdash; Install the add-on</h4>
+            <p>Find <strong>HA Vibecode Agent</strong> in the store and click <strong>Install</strong>. Configure your long-lived access token in the add-on settings.</p>
+          </div>
+          <div class="step">
+            <h4>Step 3 &mdash; Connect your IDE</h4>
+            <p>Open the add-on <strong>Web UI</strong> panel in Home Assistant. It shows a ready-to-paste MCP configuration for your IDE &mdash; Claude Code, Cursor, VS Code, Windsurf, Codex, and others. Copy it and add to your IDE settings.</p>
+          </div>
+        </div>
+        <div class="tab-panel" id="tab-docker">
+          <div class="step">
+            <h4>Step 1 &mdash; Pull the image</h4>
+            <pre><code>docker pull ghcr.io/coolver/ha-vibecode-agent:latest</code></pre>
+          </div>
+          <div class="step">
+            <h4>Step 2 &mdash; Create a config</h4>
+            <pre><code>mkdir -p /opt/ha-vibecode-agent
+cat &gt; /opt/ha-vibecode-agent/.env &lt;&lt;EOF
+HA_URL=http://homeassistant.local:8123
+HA_TOKEN=your_long_lived_access_token
+EOF</code></pre>
+          </div>
+          <div class="step">
+            <h4>Step 3 &mdash; Run the container</h4>
+            <pre><code>docker run -d \
+  --name ha-vibecode-agent \
+  --restart unless-stopped \
+  --env-file /opt/ha-vibecode-agent/.env \
+  -p 8099:8099 \
+  ghcr.io/coolver/ha-vibecode-agent:latest</code></pre>
+          </div>
+          <div class="step">
+            <h4>Step 4 &mdash; Connect your IDE</h4>
+            <p>Open <code>http://YOUR_HOST:8099</code> in a browser. The agent shows a ready-to-paste MCP configuration for your IDE &mdash; Claude Code, Cursor, VS Code, Windsurf, Codex, and others. Copy it and add to your IDE settings.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- COMPARISON TABLE -->
+  <section class="section" id="comparison">
+    <div class="container">
+      <h2 class="section-title">What's Included</h2>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Capability</th>
+              <th>Add-on Mode</th>
+              <th>Standalone Docker</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td>File management (read/write/list/delete)</td><td class="check">&check;</td><td class="check">&check;</td></tr>
+            <tr><td>Automations & scripts CRUD</td><td class="check">&check;</td><td class="check">&check;</td></tr>
+            <tr><td>Dashboard & theme management</td><td class="check">&check;</td><td class="check">&check;</td></tr>
+            <tr><td>Git versioning & rollback</td><td class="check">&check;</td><td class="check">&check;</td></tr>
+            <tr><td>Entity control & monitoring</td><td class="check">&check;</td><td class="check">&check;</td></tr>
+            <tr><td>HACS integration</td><td class="check">&check;</td><td class="check">&check;</td></tr>
+            <tr><td>Blueprints, Calendar, Zones</td><td class="check">&check;</td><td class="check">&check;</td></tr>
+            <tr><td>History & statistics</td><td class="check">&check;</td><td class="check">&check;</td></tr>
+            <tr><td>System logs & diagnostics</td><td class="check">&check;</td><td class="check">&check;</td></tr>
+            <tr><td>Add-on management</td><td class="check">&check;</td><td class="cross">&cross;</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- FAQ -->
+  <section class="section section-alt" id="faq">
+    <div class="container">
+      <h2 class="section-title">FAQ</h2>
+      <div class="faq-list">
+        <details class="faq-item">
+          <summary>How does the architecture work?</summary>
+          <p>The agent runs <em>inside</em> Home Assistant (as an add-on or sidecar container) with direct access to all HA APIs, the file system, and WebSocket. Your IDE communicates with the agent via a lightweight MCP client over HTTP — no SSH tunnels or port forwarding required.</p>
+        </details>
+        <details class="faq-item">
+          <summary>Does it work with Proxmox / Docker installs?</summary>
+          <p>Yes. If you run HAOS, install it as an add-on. For Proxmox, Docker, or any other setup, run the standalone Docker container alongside your HA instance.</p>
+        </details>
+        <details class="faq-item">
+          <summary>Is it safe?</summary>
+          <p>Every file operation is path-validated to prevent writes outside allowed directories. Every change is Git-committed before and after, so you can always roll back. The agent uses your long-lived access token with the same permissions you configure.</p>
+        </details>
+        <details class="faq-item">
+          <summary>Which IDEs are supported?</summary>
+          <p>Any IDE that supports the MCP protocol: Claude Code, Cursor, VS Code (with GitHub Copilot), Windsurf, Codex, and others. The agent communicates over standard MCP, so new IDE support is automatic.</p>
+        </details>
+        <details class="faq-item">
+          <summary>Do I need a cloud subscription?</summary>
+          <p>No. The agent runs entirely on your local network. You only need an AI provider API key (Anthropic, OpenAI, etc.) configured in your IDE, which you likely already have.</p>
+        </details>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-links">
+        <a href="https://github.com/coolver/home-assistant-vibecode-agent" target="_blank" rel="noopener">GitHub</a>
+        <a href="https://www.npmjs.com/package/@anthropic/ha-vibecode-agent" target="_blank" rel="noopener">NPM</a>
+        <a href="https://github.com/coolver/home-assistant-vibecode-agent#readme" target="_blank" rel="noopener">Docs</a>
+        <a href="https://github.com/coolver/home-assistant-vibecode-agent/issues" target="_blank" rel="noopener">Issues</a>
+      </div>
+      <p class="footer-meta">MIT License &middot; Made for Home Assistant</p>
+    </div>
+  </footer>
+
+  <!-- TAB SWITCHING -->
+  <script>
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById(`tab-${btn.dataset.tab}`)?.classList.add('active');
+      });
+    });
+  </script>
+
+  <style>
+    /* ── RESET & BASE ── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #080a12;
+      --bg-alt: #0d1019;
+      --surface: #12152a;
+      --border: #1e2240;
+      --text: #e4e6f0;
+      --text-dim: #7a7f9a;
+      --neon-blue: #00d4ff;
+      --neon-purple: #a855f7;
+      --neon-cyan: #22d3ee;
+      --neon-green: #34d399;
+      --neon-red: #f87171;
+      --glow-blue: 0 0 20px rgba(0, 212, 255, 0.3);
+      --glow-purple: 0 0 20px rgba(168, 85, 247, 0.3);
+      --gradient: linear-gradient(135deg, var(--neon-blue), var(--neon-purple));
+      --radius: 10px;
+      --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+      background-image:
+        radial-gradient(ellipse at 20% 0%, rgba(0, 212, 255, 0.06) 0%, transparent 50%),
+        radial-gradient(ellipse at 80% 0%, rgba(168, 85, 247, 0.06) 0%, transparent 50%);
+    }
+
+    a { color: var(--neon-blue); text-decoration: none; transition: color 0.2s; }
+    a:hover { color: var(--neon-cyan); }
+
+    .container { max-width: 1100px; margin: 0 auto; padding: 0 24px; }
+
+    /* ── NAV ── */
+    .nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(8, 10, 18, 0.8);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .nav-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 56px;
+    }
+
+    .nav-brand {
+      font-weight: 700;
+      font-size: 1.05rem;
+      color: var(--neon-blue);
+      letter-spacing: -0.01em;
+    }
+
+    .nav-links { display: flex; gap: 24px; }
+    .nav-links a {
+      color: var(--text-dim);
+      font-size: 0.9rem;
+      transition: color 0.2s, text-shadow 0.2s;
+    }
+    .nav-links a:hover {
+      color: var(--neon-blue);
+      text-shadow: 0 0 8px rgba(0, 212, 255, 0.4);
+    }
+
+    /* ── HERO ── */
+    .hero {
+      padding: 110px 0 90px;
+      text-align: center;
+      position: relative;
+    }
+
+    .hero::before {
+      content: "";
+      position: absolute;
+      top: 0; left: 50%;
+      transform: translateX(-50%);
+      width: 600px;
+      height: 600px;
+      background: radial-gradient(circle, rgba(0, 212, 255, 0.08) 0%, rgba(168, 85, 247, 0.05) 40%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .hero-title {
+      font-size: clamp(2.4rem, 5vw, 3.8rem);
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      margin-bottom: 12px;
+      color: #fff;
+    }
+
+    .hero-subtitle {
+      font-size: 1.3rem;
+      color: var(--neon-blue);
+      font-weight: 500;
+      margin-bottom: 16px;
+    }
+
+    .hero-desc {
+      max-width: 560px;
+      margin: 0 auto 36px;
+      color: var(--text-dim);
+      font-size: 1.05rem;
+    }
+
+    .hero-buttons { display: flex; gap: 14px; justify-content: center; margin-bottom: 40px; }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      padding: 12px 28px;
+      border-radius: var(--radius);
+      font-weight: 600;
+      font-size: 0.95rem;
+      transition: all 0.25s ease;
+      position: relative;
+    }
+
+    .btn-primary {
+      background: var(--neon-blue);
+      color: #080a12;
+      font-weight: 700;
+    }
+    .btn-primary:hover {
+      color: #080a12;
+      box-shadow: 0 0 20px rgba(0, 212, 255, 0.35);
+      transform: translateY(-1px);
+    }
+    .btn-secondary {
+      background: var(--surface);
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+    .btn-secondary:hover {
+      border-color: var(--neon-blue);
+      color: var(--neon-blue);
+      box-shadow: var(--glow-blue);
+      transform: translateY(-1px);
+    }
+
+    .hero-stats { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+
+    .stat-badge {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      padding: 6px 18px;
+      border-radius: 100px;
+      font-size: 0.85rem;
+      color: var(--text-dim);
+      font-weight: 500;
+      transition: border-color 0.3s, box-shadow 0.3s;
+    }
+    .stat-badge:hover {
+      border-color: rgba(0, 212, 255, 0.4);
+      box-shadow: 0 0 12px rgba(0, 212, 255, 0.15);
+    }
+
+    /* ── SECTIONS ── */
+    .section { padding: 90px 0; }
+    .section-alt { background: var(--bg-alt); }
+    .section-title {
+      text-align: center;
+      font-size: 1.8rem;
+      font-weight: 700;
+      margin-bottom: 52px;
+      letter-spacing: -0.02em;
+      position: relative;
+      display: inline-block;
+      width: 100%;
+    }
+    .section-subtitle {
+      text-align: center;
+      color: var(--text-dim);
+      font-size: 1.02rem;
+      max-width: 600px;
+      margin: -32px auto 48px;
+    }
+
+    .section-title::after {
+      content: "";
+      display: block;
+      width: 60px;
+      height: 3px;
+      background: var(--gradient);
+      margin: 14px auto 0;
+      border-radius: 2px;
+      box-shadow: 0 0 10px rgba(0, 212, 255, 0.4);
+    }
+
+    /* ── GRID ── */
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+    }
+
+    /* ── CARDS ── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 28px 24px;
+      transition: border-color 0.3s, box-shadow 0.3s, transform 0.3s;
+    }
+    .card:hover {
+      border-color: rgba(0, 212, 255, 0.35);
+      box-shadow: 0 0 25px rgba(0, 212, 255, 0.08), inset 0 0 25px rgba(0, 212, 255, 0.03);
+      transform: translateY(-2px);
+    }
+
+    .card-icon {
+      color: var(--neon-blue);
+      margin-bottom: 14px;
+      line-height: 1;
+    }
+
+    .card h3 {
+      font-size: 1.1rem;
+      margin-bottom: 14px;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .card ul {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .card li {
+      color: var(--text-dim);
+      font-size: 0.92rem;
+      padding-left: 18px;
+      position: relative;
+    }
+
+    .card li::before {
+      content: ">";
+      position: absolute;
+      left: 0;
+      color: var(--neon-blue);
+      font-family: monospace;
+      font-weight: 700;
+    }
+
+    /* ── ARCHITECTURE ── */
+    .arch-stack {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      max-width: 900px;
+      margin: 0 auto;
+    }
+
+    .arch-row {
+      border-radius: var(--radius);
+      padding: 24px 28px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+    }
+
+    .arch-row-dim {
+      opacity: 0.55;
+      background: var(--bg-alt);
+    }
+
+    .arch-row-glow {
+      border-color: rgba(0, 212, 255, 0.25);
+      box-shadow: 0 0 25px rgba(0, 212, 255, 0.06);
+    }
+
+    .arch-label {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+
+    .arch-label-tag {
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      padding: 3px 10px;
+      border-radius: 4px;
+    }
+    .arch-tag-old {
+      background: rgba(248, 113, 113, 0.12);
+      color: var(--neon-red);
+      border: 1px solid rgba(248, 113, 113, 0.2);
+    }
+    .arch-tag-new {
+      background: rgba(0, 212, 255, 0.1);
+      color: var(--neon-blue);
+      border: 1px solid rgba(0, 212, 255, 0.2);
+    }
+
+    .arch-label-text {
+      color: var(--text-dim);
+      font-size: 0.88rem;
+    }
+
+    .arch-flow {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+      font-size: 0.88rem;
+    }
+
+    .arch-node {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--bg);
+      padding: 10px 16px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      color: var(--text-dim);
+      transition: border-color 0.3s, box-shadow 0.3s;
+    }
+    .arch-node svg { flex-shrink: 0; }
+
+    .arch-node-accent {
+      color: var(--text);
+      border-color: rgba(0, 212, 255, 0.15);
+    }
+    .arch-node-accent svg { color: var(--neon-blue); }
+
+    .arch-node-highlight {
+      color: var(--text);
+      border-color: rgba(0, 212, 255, 0.3);
+      box-shadow: 0 0 12px rgba(0, 212, 255, 0.1);
+    }
+    .arch-node-highlight svg { color: var(--neon-blue); }
+
+    .arch-arrow {
+      color: var(--text-dim);
+      font-size: 1.1rem;
+    }
+    .arch-arrow-glow {
+      color: var(--neon-blue);
+      text-shadow: 0 0 6px rgba(0, 212, 255, 0.4);
+    }
+
+    /* ── FEATURE CARDS ── */
+    .feature-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      transition: border-color 0.3s, box-shadow 0.3s, transform 0.3s;
+    }
+    .feature-card:hover {
+      border-color: rgba(168, 85, 247, 0.35);
+      box-shadow: 0 0 25px rgba(168, 85, 247, 0.08), inset 0 0 25px rgba(168, 85, 247, 0.03);
+      transform: translateY(-2px);
+    }
+
+    .feature-icon {
+      font-size: 1.6rem;
+      margin-bottom: 12px;
+    }
+
+    .feature-card h3 { font-size: 1rem; font-weight: 600; margin-bottom: 8px; }
+
+    .feature-card p { color: var(--text-dim); font-size: 0.9rem; }
+
+    /* ── TABS ── */
+    .tabs {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+
+    .tab-buttons {
+      display: flex;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .tab-btn {
+      flex: 1;
+      padding: 14px;
+      background: none;
+      border: none;
+      color: var(--text-dim);
+      font-size: 0.95rem;
+      font-weight: 500;
+      cursor: pointer;
+      font-family: var(--font);
+      transition: color 0.2s, background 0.2s, text-shadow 0.2s;
+    }
+
+    .tab-btn:hover {
+      color: var(--text);
+      background: rgba(0, 212, 255, 0.03);
+    }
+    .tab-btn.active {
+      color: var(--neon-blue);
+      border-bottom: 2px solid var(--neon-blue);
+      text-shadow: 0 0 10px rgba(0, 212, 255, 0.3);
+    }
+
+    .tab-panel { display: none; padding: 32px; }
+    .tab-panel.active { display: block; }
+
+    .step { margin-bottom: 28px; }
+    .step:last-child { margin-bottom: 0; }
+    .step h4 {
+      font-size: 1rem;
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: var(--neon-cyan);
+    }
+    .step p { color: var(--text-dim); font-size: 0.92rem; margin-bottom: 12px; }
+
+    pre {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 14px 18px;
+      overflow-x: auto;
+      font-size: 0.85rem;
+      line-height: 1.5;
+      transition: border-color 0.3s, box-shadow 0.3s;
+    }
+    pre:hover {
+      border-color: rgba(0, 212, 255, 0.3);
+      box-shadow: 0 0 15px rgba(0, 212, 255, 0.05);
+    }
+
+    code {
+      font-family: ui-monospace, "SF Mono", "Cascadia Code", Menlo, Consolas, monospace;
+      color: var(--neon-cyan);
+    }
+
+    /* ── TABLE ── */
+    .table-wrap { overflow-x: auto; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      font-size: 0.92rem;
+    }
+
+    th, td {
+      padding: 14px 18px;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+
+    th {
+      background: var(--bg-alt);
+      font-weight: 600;
+      color: var(--text-dim);
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    td.check {
+      color: var(--neon-green);
+      text-align: center;
+      font-size: 1.2rem;
+      text-shadow: 0 0 8px rgba(52, 211, 153, 0.4);
+    }
+    td.cross {
+      color: var(--neon-red);
+      text-align: center;
+      font-size: 1.2rem;
+    }
+
+    /* ── FAQ ── */
+    .faq-list { max-width: 720px; margin: 0 auto; display: flex; flex-direction: column; gap: 10px; }
+
+    .faq-item {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      transition: border-color 0.3s, box-shadow 0.3s;
+    }
+    .faq-item[open] {
+      border-color: rgba(0, 212, 255, 0.25);
+      box-shadow: 0 0 15px rgba(0, 212, 255, 0.05);
+    }
+
+    .faq-item summary {
+      padding: 18px 24px;
+      cursor: pointer;
+      font-weight: 500;
+      font-size: 0.95rem;
+      list-style: none;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      transition: color 0.2s;
+    }
+    .faq-item summary:hover { color: var(--neon-blue); }
+
+    .faq-item summary::-webkit-details-marker { display: none; }
+
+    .faq-item summary::after {
+      content: "+";
+      font-size: 1.2rem;
+      color: var(--text-dim);
+      transition: color 0.2s;
+      font-family: monospace;
+    }
+
+    .faq-item[open] summary::after {
+      content: "\2212";
+      color: var(--neon-blue);
+    }
+
+    .faq-item p {
+      padding: 0 24px 18px;
+      color: var(--text-dim);
+      font-size: 0.92rem;
+      line-height: 1.65;
+    }
+
+    /* ── FOOTER ── */
+    .footer {
+      border-top: 1px solid var(--border);
+      padding: 40px 0;
+      text-align: center;
+    }
+
+    .footer-links {
+      display: flex;
+      gap: 24px;
+      justify-content: center;
+      margin-bottom: 16px;
+    }
+
+    .footer-links a {
+      color: var(--text-dim);
+      font-size: 0.9rem;
+      transition: color 0.2s, text-shadow 0.2s;
+    }
+    .footer-links a:hover {
+      color: var(--neon-blue);
+      text-shadow: 0 0 8px rgba(0, 212, 255, 0.3);
+    }
+    .footer-meta { color: var(--text-dim); font-size: 0.82rem; }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 768px) {
+      .grid-3 { grid-template-columns: 1fr; }
+      .nav-links { gap: 16px; }
+      .nav-links a { font-size: 0.82rem; }
+      .hero { padding: 70px 0 60px; }
+      .section { padding: 60px 0; }
+      .tab-panel { padding: 24px 18px; }
+      .arch-flow { font-size: 0.8rem; }
+    }
+
+    @media (max-width: 480px) {
+      .nav-links { display: none; }
+      .hero-buttons { flex-direction: column; align-items: center; }
+    }
+  </style>
+
+</body>
+</html>

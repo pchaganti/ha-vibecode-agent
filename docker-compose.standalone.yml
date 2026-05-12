@@ -1,0 +1,21 @@
+version: '3.8'
+
+services:
+  ha-vibecode-agent:
+    build:
+      context: .
+      dockerfile: Dockerfile.standalone
+    container_name: ha-vibecode-agent
+    ports:
+      - "8099:8099"
+    environment:
+      - HA_URL=${HA_URL}
+      - HA_TOKEN=${HA_TOKEN}
+      - PORT=${PORT:-8099}
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+      - GIT_VERSIONING_AUTO=${GIT_VERSIONING_AUTO:-true}
+      - MAX_BACKUPS=${MAX_BACKUPS:-30}
+      - CONFIG_PATH=/config
+    volumes:
+      - ${HA_CONFIG_PATH:-/path/to/ha/config}:/config
+    restart: unless-stopped

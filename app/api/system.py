@@ -84,7 +84,7 @@ async def check_config():
                 error_data = json.loads(e.response.text)
                 if 'message' in error_data:
                     error_msg = error_data['message']
-            except:
+            except Exception:
                 pass
         
         return Response(
@@ -123,5 +123,26 @@ async def get_config():
         }
     except Exception as e:
         logger.error(f"Failed to get config: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/repairs")
+async def get_repairs():
+    """
+    Get Home Assistant repair issues (configuration problems, deprecations, etc.)
+
+    Returns a list of active repair issues that need attention, similar to
+    Settings -> System -> Repairs in the HA UI.
+    """
+    try:
+        result = await ha_client._request('GET', '/api/repairs/issues')
+        issues = result.get('issues', result) if isinstance(result, dict) else result
+        return {
+            "success": True,
+            "total": len(issues) if isinstance(issues, list) else 0,
+            "issues": issues
+        }
+    except Exception as e:
+        logger.error(f"Failed to get repair issues: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 

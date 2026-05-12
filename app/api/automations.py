@@ -19,6 +19,7 @@ logger = logging.getLogger('ha_cursor_agent')
 @router.get("/list")
 async def list_automations(
     ids_only: bool = Query(False, description="If true, return only automation IDs without full configurations"),
+    summary_only: bool = Query(False, description="If true, return lightweight summary (id, alias, enabled) without triggers/conditions/actions. Saves tokens."),
     search: Optional[str] = Query(None, description="Case-insensitive substring search by automation id or alias"),
     page: int = Query(1, ge=1, description="Page number (1-based, default 1)"),
     page_size: int = Query(250, ge=1, le=500, description="Items per page (default 250, max 500)"),
@@ -96,6 +97,31 @@ async def list_automations(
                 lambda item: item.get("alias") if isinstance(item, dict) else None,
             ],
         )
+
+        # Summary mode: return lightweight data (id, alias, enabled) without triggers/conditions/actions
+        if _coerce_bool(summary_only, False):
+            summaries = []
+            for a in automations:
+                if isinstance(a, dict):
+                    summaries.append({
+                        "id": a.get("id", ""),
+                        "alias": a.get("alias", ""),
+                        "enabled": a.get("enabled", True),
+                        "description": a.get("description", ""),
+                    })
+            paged = paginate_items(summaries, page=page, page_size=page_size, full_list=full_list)
+            return {
+                "success": True,
+                "count": len(paged["items"]),
+                "total": paged["total"],
+                "page": paged["page"],
+                "page_size": paged["page_size"],
+                "total_pages": paged["total_pages"],
+                "has_next": paged["has_next"],
+                "next_page": paged["next_page"],
+                "automations": paged["items"],
+            }
+
         paged = paginate_items(automations, page=page, page_size=page_size, full_list=full_list)
         return {
             "success": True,

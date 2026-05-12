@@ -2,6 +2,32 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.10.45] - 2026-05-12
+
+**Pair with MCP client 3.2.29+.**
+
+### Run anywhere — no HAOS required
+
+The agent now works as a standalone Docker container for Proxmox, Docker Compose, or bare-metal installs. One `docker-compose up` and you're running. The agent auto-detects whether it's inside HAOS or standalone and adjusts accordingly. Docker images are published to GHCR on every release.
+
+### 13 new tools for your AI assistant
+
+Your AI can now work with **history and statistics** (temperature trends, energy usage over time), **blueprints** (browse and import community automation templates), **calendars and todo lists**, **zones** (create and manage presence detection areas), and **repair issues** (spot broken integrations before they cause problems).
+
+New **snapshot** tool gives the AI a complete picture of your smart home in one request — devices, areas, states, integrations — with filters so it only loads what it needs.
+
+### Smarter search and service calls
+
+Entity search now tolerates typos — asking for `light.bedrrom` finds `light.bedroom`. Service calls can wait until the device actually reaches the expected state before reporting success. Automation lists have a lightweight summary mode that saves context on large setups.
+
+### Reliability and performance
+
+Major internal audit: fixed a bug where deleting an automation could accidentally match the wrong one, added connection pooling and automatic retries for transient network errors, eliminated blocking I/O that could stall the event loop, and added proper locking for concurrent git operations. 40+ issues addressed in total.
+
+### Security, testing, and docs
+
+Added `SECURITY.md`, a basic test suite, and a GitHub Pages landing page with an interactive setup wizard that generates ready-to-paste configs for Cursor, VS Code, Claude Code, Windsurf, Codex, and other MCP clients.
+
 ## [2.10.44] - 2026-04-17
 
 **Thanks:** [Chris Lennon](https://github.com/chrislennon) for the Home Assistant WebSocket resilience work shipped in [PR #38](https://github.com/Coolver/home-assistant-vibecode-agent/pull/38). [SpryNM](https://github.com/sprynm) for practical feedback that improved the **Codex** setup steps in the ingress UI (aligned with [OpenAI’s Codex MCP guide](https://developers.openai.com/codex/mcp/)).

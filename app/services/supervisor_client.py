@@ -1,5 +1,6 @@
 """Home Assistant Supervisor API Client for Add-on Management"""
 import os
+import asyncio
 import aiohttp
 import logging
 from typing import Dict, List, Any, Optional
@@ -16,18 +17,38 @@ class SupervisorClient:
             'X-Supervisor-Token': self.token,
             'Content-Type': 'application/json',
         }
+        self._session: Optional[aiohttp.ClientSession] = None
         
         if not self.token:
-            logger.warning("⚠️ No SUPERVISOR_TOKEN found - Add-on management disabled")
+            logger.warning("No SUPERVISOR_TOKEN found - Add-on management disabled")
         else:
             logger.info(f"SupervisorClient initialized - URL: {self.base_url}")
     
     def is_available(self) -> bool:
         """Check if Supervisor API is available (running as add-on)"""
         return bool(self.token)
-    
+
+    async def _get_session(self) -> aiohttp.ClientSession:
+        """Get or create a shared aiohttp session for connection pooling."""
+        if self._session is None or self._session.closed:
+            self._session = aiohttp.ClientSession(
+                headers=self.headers,
+                timeout=aiohttp.ClientTimeout(total=300),
+            )
+        return self._session
+
+    async def close(self):
+        """Close the shared HTTP session."""
+        if self._session and not self._session.closed:
+            await self._session.close()
+            self._session = None
+
+    _RETRYABLE_STATUSES = {502, 503, 504}
+    _MAX_RETRIES = 3
+    _RETRY_BACKOFF = [1.0, 3.0, 5.0]
+
     async def _request(self, method: str, endpoint: str, data: Optional[Dict] = None, timeout: int = 300) -> Dict:
-        """Make HTTP request to Supervisor API
+        """Make HTTP request to Supervisor API with retry on transient failures.
         
         Args:
             method: HTTP method (GET, POST, etc.)
@@ -36,12 +57,12 @@ class SupervisorClient:
             timeout: Request timeout in seconds (default 300 for install operations)
         """
         url = f"{self.base_url}/{endpoint}"
+        logger.info(f"Supervisor API Request: {method} {url}")
         
-        logger.info(f"🔍 Supervisor API Request: {method} {url}")
-        logger.debug(f"🔍 Headers: X-Supervisor-Token present, Content-Type=application/json")
-        
-        try:
-            async with aiohttp.ClientSession() as session:
+        last_error: Optional[Exception] = None
+        for attempt in range(self._MAX_RETRIES):
+            try:
+                session = await self._get_session()
                 async with session.request(
                     method, 
                     url, 
@@ -49,6 +70,12 @@ class SupervisorClient:
                     json=data,
                     timeout=aiohttp.ClientTimeout(total=timeout)
                 ) as response:
+                    if response.status in self._RETRYABLE_STATUSES and attempt < self._MAX_RETRIES - 1:
+                        text = await response.text()
+                        logger.warning(f"Supervisor API transient error {response.status}, retrying ({attempt + 1}/{self._MAX_RETRIES})...")
+                        await asyncio.sleep(self._RETRY_BACKOFF[attempt])
+                        continue
+
                     if response.status >= 400:
                         text = await response.text()
                         logger.error(f"Supervisor API error: {response.status} - {text}")
@@ -56,14 +83,20 @@ class SupervisorClient:
                     
                     logger.debug(f"Supervisor API success: {method} {url} -> {response.status}")
                     
-                    # Some endpoints return no content
                     if response.status == 204:
                         return {"success": True, "message": "Operation completed"}
                     
                     return await response.json()
-        except aiohttp.ClientError as e:
-            logger.error(f"Connection error to Supervisor: {e}")
-            raise Exception(f"Failed to connect to Supervisor: {e}")
+            except (aiohttp.ClientError, aiohttp.ServerDisconnectedError, asyncio.TimeoutError) as e:
+                last_error = e
+                if attempt < self._MAX_RETRIES - 1:
+                    logger.warning(f"Supervisor connection error ({type(e).__name__}), retrying ({attempt + 1}/{self._MAX_RETRIES})...")
+                    await asyncio.sleep(self._RETRY_BACKOFF[attempt])
+                else:
+                    logger.error(f"Connection error to Supervisor after {self._MAX_RETRIES} attempts: {e}")
+                    raise Exception(f"Failed to connect to Supervisor: {e}")
+        
+        raise Exception(f"Failed to connect to Supervisor: {last_error}")
     
     # ==================== Add-on Information ====================
     
@@ -129,20 +162,34 @@ class SupervisorClient:
         """
         url = f"{self.base_url}/addons/{slug}/logs"
         
-        try:
-            async with aiohttp.ClientSession() as session:
+        last_error: Optional[Exception] = None
+        for attempt in range(self._MAX_RETRIES):
+            try:
+                session = await self._get_session()
                 async with session.get(
-                    url, 
+                    url,
                     headers=self.headers,
                     timeout=aiohttp.ClientTimeout(total=30)
                 ) as response:
+                    if response.status in self._RETRYABLE_STATUSES and attempt < self._MAX_RETRIES - 1:
+                        logger.warning(f"Supervisor logs transient error {response.status}, retrying ({attempt + 1}/{self._MAX_RETRIES})...")
+                        await asyncio.sleep(self._RETRY_BACKOFF[attempt])
+                        continue
+
                     if response.status >= 400:
                         text = await response.text()
                         raise Exception(f"Failed to get logs: {response.status} - {text}")
                     
                     return await response.text()
-        except aiohttp.ClientError as e:
-            raise Exception(f"Failed to get add-on logs: {e}")
+            except (aiohttp.ClientError, aiohttp.ServerDisconnectedError, asyncio.TimeoutError) as e:
+                last_error = e
+                if attempt < self._MAX_RETRIES - 1:
+                    logger.warning(f"Supervisor logs connection error ({type(e).__name__}), retrying ({attempt + 1}/{self._MAX_RETRIES})...")
+                    await asyncio.sleep(self._RETRY_BACKOFF[attempt])
+                else:
+                    raise Exception(f"Failed to get add-on logs: {e}")
+        
+        raise Exception(f"Failed to get add-on logs: {last_error}")
     
     # ==================== Add-on Lifecycle ====================
     
@@ -263,10 +310,16 @@ async def get_supervisor_client() -> SupervisorClient:
     """Get Supervisor client instance
     
     Raises:
-        Exception: If Supervisor API is not available (not running as add-on)
+        HTTPException(501): If Supervisor API is not available (not running as add-on)
     """
     if not supervisor_client.is_available():
-        raise Exception("Supervisor API not available - agent must run as Home Assistant add-on for add-on management")
+        from fastapi import HTTPException
+        raise HTTPException(
+            status_code=501,
+            detail="Add-on management requires Home Assistant Supervisor (HAOS). "
+                   "Not available in standalone/Docker mode. "
+                   "Install Home Assistant OS or use Supervised installation for add-on support."
+        )
     return supervisor_client
 
 

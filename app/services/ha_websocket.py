@@ -365,7 +365,7 @@ class HAWebSocketClient:
         try:
             await self._send_message({'type': 'ping'}, timeout=5.0)
             return True
-        except:
+        except Exception:
             return False
     
     async def wait_for_connection(self, timeout: float = 30.0):

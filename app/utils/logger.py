@@ -1,12 +1,13 @@
 """Logging utilities"""
 import logging
 import sys
+from collections import deque
 from datetime import datetime
 from pathlib import Path
 
-# Store logs in memory for API access
-LOG_BUFFER = []
+# Store logs in memory for API access — deque auto-evicts oldest entries in O(1)
 MAX_LOG_SIZE = 1000
+LOG_BUFFER: deque = deque(maxlen=MAX_LOG_SIZE)
 
 class BufferHandler(logging.Handler):
     """Custom handler to store logs in memory"""
@@ -18,10 +19,6 @@ class BufferHandler(logging.Handler):
             "module": record.module
         }
         LOG_BUFFER.append(log_entry)
-        
-        # Keep only last MAX_LOG_SIZE entries
-        if len(LOG_BUFFER) > MAX_LOG_SIZE:
-            LOG_BUFFER.pop(0)
 
 def setup_logger(name: str, level: str = 'INFO'):
     """Setup logger with console and buffer handlers"""
@@ -49,7 +46,7 @@ def setup_logger(name: str, level: str = 'INFO'):
 
 def get_logs(limit: int = 100, level: str = None):
     """Get logs from buffer"""
-    logs = LOG_BUFFER[-limit:]
+    logs = list(LOG_BUFFER)[-limit:]
     
     if level:
         logs = [log for log in logs if log['level'] == level.upper()]

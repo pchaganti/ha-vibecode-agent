@@ -250,7 +250,7 @@ async def check_theme_config():
         try:
             files = await file_manager.list_files("themes")
             themes_dir_exists = True
-        except:
+        except Exception:
             pass
         
         return {
