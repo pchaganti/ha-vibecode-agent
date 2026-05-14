@@ -34,7 +34,7 @@ https://github.com/user-attachments/assets/0df48019-06c0-48dd-82ad-c7fe0734ddb3
 
 ## 🎯 What is this?
 
-**HA Vibecode Agent** is a service that exposes a safe REST API and toolset, allowing AI assistants (Cursor, VS Code, Claude, Continue, and any MCP-enabled IDE) to work *with* your Home Assistant instead of just generating YAML in the dark.
+**HA Vibecode Agent** is a service that exposes a safe REST API and toolset, allowing AI assistants (Claude Code, Cursor, VS Code, Antigravity, and any MCP-enabled IDE) to safely work *with* your Home Assistant instead of just generating YAML in the dark.
 
 It supports two deployment modes:
 
