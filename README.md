@@ -47,55 +47,6 @@ Both modes provide the same core functionality. The only difference: **Add-on ma
 
 ---
 
-### 🔍 Analyze your setup
-
-✅ Read your full configuration — entities, automations, scripts, helpers  
-✅ Understand your devices — capabilities, relations, and usage patterns  
-✅ Learn existing logic — analyze how your current automations and scripts behave  
-
----
-
-### 🏗️ Build intelligence
-
-✅ Create complete systems — multiple interconnected automations in seconds  
-✅ Generate helpers and sensors — tailored to your actual setup and needs  
-✅ Write optimized scripts — based on real entities, areas, and devices  
-✅ Refactor existing logic — improve or merge automations instead of starting from scratch  
-
----
-
-### 📊 Dashboards & UI
-
-✅ Create and update Lovelace dashboards — fully programmatically  
-✅ Add, remove, or rearrange cards — stat, graphs, history, custom cards, and more  
-✅ Control layouts and views — organize rooms, areas, and scenarios  
-✅ Design and tweak themes — colors, typography, and styles for a personalized UI  
-
----
-
-### 🔒 Safe operations
-
-✅ Git-based versioning — every change is tracked with meaningful commit messages  
-✅ Human-readable commits — AI explains *what* changed and *why*  
-✅ Configuration validation — test before apply to reduce breaking changes  
-✅ One-click rollback — revert to a previous state if something goes wrong  
-✅ Activity log — full audit trail of what the agent did and when  
-
----
-
-### 📦 Extend with the community
-
-✅ Install and configure HACS — unlock 1000+ community integrations  
-✅ Search repositories — themes, plugins, custom components, dashboards  
-✅ Install integrations — one-command setup for new HACS components  
-✅ Keep things fresh — update all HACS repositories from a single place  
-
----
-
-**Result:**  
-You describe your goal → AI inspects your Home Assistant → designs a custom solution → and deploys it on-board automatically. 🚀
-
-
 ### 🚀 How is this different from other MCP modules for Home Assistant?
 
 Most MCP integrations I've seen for Claude, Cursor, VS Code or Antigravity work only on your local machine and talk to Home Assistant over SSH and sometimes the REST API.
@@ -124,79 +75,7 @@ Your AI IDE gets exactly the actions and data it needs — through a stable API 
 
 ---
 
-## 🌟 Features
-
-### 🏠 Home Assistant Integration
-- Full access to HA REST API and WebSocket
-- List all entities and their states
-- Call any HA service
-- Reload components (automations, scripts, templates)
-- Check configuration validity
-- Real-time state monitoring
-
-### 📊 Dashboards & Themes
-- Create and update Lovelace dashboards programmatically
-- Add, remove, and rearrange cards (stat, graphs, history, custom cards, etc.)
-- Manage views, layouts, and groups for rooms and areas
-- Create and tweak themes for fully customized UI appearance
-- Safely adjust dashboards and themes through AI-driven operations
-
-### 📁 File Management
-- List, read, write, append, delete files
-- Automatic backup before modifications
-- YAML parsing and validation
-- Safe path handling (restricted to `/config`)
-
-### 🔧 Component Management
-- Create/Delete Input Helpers (boolean, text, number, datetime, select)
-- Create/Delete Automations
-- Create/Delete Scripts
-- Automatic reload after changes
-
-### 💾 Git Versioning
-- Automatic commit on every change with meaningful commit messages
-- AI-generated descriptive messages explaining what and why changed
-- Backup history (up to 30 commits, configurable)
-- Automatic cleanup of old commits to prevent repository bloat
-- **View change history** – ask AI to show recent commits with meaningful messages
-- **Easy rollback** – ask AI to rollback to any previous version by description or commit hash
-- View diffs between versions
-- Commit messages include operation context (e.g., "Add automation: Control lights when motion detected")
-
-**Example AI interactions:**
-- *"Show me the last 10 changes to my configuration"* → AI displays commit history with meaningful messages  
-- *"Something broke! Roll back to the version from yesterday"* → AI finds and restores previous version  
-- *"What changed in the last commit?"* → AI shows detailed diff  
-- *"Roll back to when I added the motion sensor automation"* → AI finds and restores that specific commit
-
-### 📡 Monitoring & Troubleshooting
-- Agent logs API with filtering
-- Operation history
-- Real-time status
-- Health check endpoint
-- System monitoring and analysis
-
-### 🔌 Add-on Management *(Supervisor mode only)*
-**Complete add-on lifecycle management – install, configure, and control services!**
-- Install/uninstall add-ons (Zigbee2MQTT, Node-RED, ESPHome, etc.)
-- Configure add-on options
-- Start/stop/restart add-ons
-- Monitor add-on logs
-- Update add-ons
-- Powered by Supervisor API
-
-### 📦 HACS Management
-**Complete HACS integration via WebSocket – browse 1000+ custom integrations!**
-- Install HACS automatically from GitHub
-- Search repositories by name, author, or category
-- Install integrations, themes, and plugins
-- Update all installed repositories
-- View repository details (stars, versions, authors)
-- Powered by persistent WebSocket connection
-
----
-
-## ⚡ Installation
+## ⚡ Installation (5 minutes)
 
 ### Option A: Home Assistant Add-on (default, recommended)
 
@@ -296,21 +175,6 @@ cat /path/to/homeassistant/config/.ha_cursor_agent_key
 
 The agent is now available at `http://<host-ip>:8099`. Configure your MCP client (Cursor, VS Code, etc.) to connect using the API key from step 4.
 
-#### Feature availability in standalone mode
-
-| Feature | Standalone | Add-on |
-|---------|:----------:|:------:|
-| File management (read/write/list) | ✅ | ✅ |
-| Automations (CRUD) | ✅ | ✅ |
-| Scripts (CRUD) | ✅ | ✅ |
-| Dashboards & themes | ✅ | ✅ |
-| Entities & states | ✅ | ✅ |
-| Helpers | ✅ | ✅ |
-| Git versioning & rollback | ✅ | ✅ |
-| HACS management (WebSocket) | ✅ | ✅ |
-| System logs & logbook | ✅ | ✅ |
-| **Add-on management** | ❌ | ✅ |
-
 ---
 
 ## 🤖 Using with AI IDE (Cursor, VS Code etc)
@@ -383,19 +247,6 @@ My bedroom lights automation isn't working. Check the logs,
 find the problem, and fix it.
 ```
 
-### What Vibecode Agent Can Do
-
-With this agent and [MCP integration](https://github.com/Coolver/home-assistant-mcp), AI IDE can:
-
-✅ **Analyze YOUR configuration** - detects your actual devices and entities  
-✅ **Create complex systems autonomously** - 10+ interconnected automations  
-✅ **Tailored to your setup** - uses your specific entity IDs and device capabilities  
-✅ **Automatic backups** - every change is Git-versioned with meaningful commit messages  
-✅ **View change history** - ask AI to show recent commits and what changed  
-✅ **Easy rollback** - ask AI to rollback to any previous version by description or date  
-✅ **Intelligent debugging** - reads logs, finds issues, fixes them  
-✅ **Error recovery** - can rollback if something goes wrong  
-✅ **End-to-end deployment** - from analysis to production  
 
 **Stop writing YAML manually! Just describe what you want.** 🚀
 
@@ -482,97 +333,9 @@ For detailed contribution guidelines, see **[CONTRIBUTING.md](CONTRIBUTING.md)**
 
 ---
 
-## 🎯 Use Cases
-
-### For Cursor AI, VS Code + Co-Pilot etc
-
-This agent enables Cursor AI to:
-
-1. **Autonomously install systems** - AI reads current config, creates all components, tests
-2. **Debug issues** - AI reads logs, configs, entity states, fixes problems
-3. **Evolve configurations** - AI improves automations based on usage patterns
-4. **Safe experimentation** - Git versioning allows instant rollback
-5. **Complete automation** - No manual steps required!
-
-### Example Workflow
-
-```
-User: "Install smart climate control system"
-   ↓
-AI via Agent:
-1. Reads current TRV entities
-2. Creates backup
-3. Creates 7 input helpers
-4. Adds 12 template sensors to configuration.yaml
-5. Creates 5 scripts
-6. Creates 10 automations
-7. Reloads all components
-8. Validates installation
-9. Shows dashboard YAML for user to add
-   ↓
-User: "Show me the last 10 changes to my configuration"
-   ↓
-AI via Agent:
-1. Calls `ha_git_history` to get commit history
-2. Displays commits with meaningful messages:
-   - "Add automation: Control lights when motion detected"
-   - "Update theme: Change primary color to blue"
-   - "Add helper: Enable/disable climate system"
-3. Shows timestamps and commit hashes
-4. Helps identify which changes to review
-
-User: "Something broke! Rollback to the version from yesterday"
-   ↓
-AI via Agent:
-1. Gets recent commit history
-2. Finds commits from yesterday
-3. Shows options with descriptions
-4. Rolls back to selected version
-5. Verifies rollback was successful
-
-User: "Rollback to when I added the motion sensor automation"
-   ↓
-AI via Agent:
-1. Searches commit history for "motion sensor automation"
-2. Finds matching commit
-3. Shows commit details
-4. Rolls back to that specific version
-3. Restarts HA
-4. Verifies restoration
-```
----
-
-## ⚠️ Important Notes
-
-### Git Versioning
-
-- Creates `.git` folder in `/config` if not exists
-- Auto-commits on every change (if enabled)
-- **Meaningful commit messages**: AI-generated descriptive messages explaining what and why changed
-  - Examples: "Add automation: Control lights when motion detected", "Update theme: Change primary color to blue"
-  - Messages are generated based on operation context and user-provided descriptions
-- Stores up to 30 commits (configurable via `max_backups`)
-- Automatic cleanup: When reaching max commits, keeps last 20 commits (maintains buffer)
-- Commit messages include operation details and context
-
-### File Operations
-
-- All paths are relative to `/config`
-- Cannot access files outside config directory
-- Automatic backup before write/delete
-- YAML validation on parse
-
-### Service Calls
-
-- Full access to Home Assistant API
-- Can call any service (lights, climate, system, etc.)
-- Requires proper entity IDs
-
----
-
 ## 🐛 Troubleshooting
 
-### "spawn npx ENOENT" error (Cursor / VS Code / Other IDE Console)
+### "spawn npx ENOENT" error (Claude Code / Cursor / VS Code / Other IDE Console)
 
 This error means Node.js is not installed or not found in your system PATH.
 
