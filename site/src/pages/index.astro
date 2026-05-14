@@ -1,6 +1,7 @@
 ---
-const title = "HA Vibecode Agent";
-const description = "AI-Powered Home Assistant Management — the only HA agent that runs inside your Home Assistant.";
+const title = "Home Assistant Vibecode Agent";
+const description =
+  "Safely create and debug automations, dashboards, themes, and configuration from your IDE — the Home Assistant agent with MCP, Git versioning, and rollback.";
 const base = "/home-assistant-vibecode-agent";
 ---
 
@@ -18,7 +19,9 @@ const base = "/home-assistant-vibecode-agent";
   <!-- NAV -->
   <nav class="nav">
     <div class="container nav-inner">
-      <a href={base} class="nav-brand">HA Vibecode Agent</a>
+      <a href={base} class="nav-brand">
+        <span class="brand-ha">Home Assistant</span><span class="brand-vc"> Vibecode Agent</span>
+      </a>
       <div class="nav-links">
         <a href="#features">Features</a>
         <a href="#installation">Installation</a>
@@ -31,15 +34,20 @@ const base = "/home-assistant-vibecode-agent";
   <!-- HERO -->
   <section class="hero">
     <div class="container">
-      <h1 class="hero-title">HA Vibecode Agent</h1>
-      <p class="hero-subtitle">AI-Powered Home Assistant Management</p>
-      <p class="hero-desc">Create and debug automations, design dashboards, tweak themes, modify configs, and deploy changes &mdash; using natural language.</p>
+      <h1 class="hero-title hero-wordmark">
+        <span class="brand-ha">Home Assistant</span>
+        <span class="hero-wordmark-sep" aria-hidden="true"></span>
+        <span class="brand-vc">Vibecode Agent</span>
+      </h1>
+      <p class="hero-desc">
+        <strong>Safely</strong> create and debug automations, design dashboards, tweak themes, modify configuration, and deploy changes &mdash; using natural language. Path-validated file access, YAML checks, and Git-backed rollback on every edit.
+      </p>
       <div class="hero-buttons">
         <a href="#installation" class="btn btn-primary">Get Started</a>
         <a href="https://github.com/coolver/home-assistant-vibecode-agent" target="_blank" rel="noopener" class="btn btn-secondary">GitHub</a>
       </div>
       <div class="hero-stats">
-        <span class="stat-badge">78+ Tools</span>
+        <span class="stat-badge">95+ MCP tools</span>
         <span class="stat-badge">v2.10.47</span>
         <span class="stat-badge">MIT License</span>
       </div>
@@ -411,9 +419,30 @@ EOF</code></pre>
 
     .nav-brand {
       font-weight: 700;
-      font-size: 1.05rem;
-      color: var(--neon-blue);
+      font-size: 0.95rem;
       letter-spacing: -0.01em;
+      line-height: 1.25;
+    }
+
+    /* Home Assistant–inspired wordmark (colors only; not the HA trademark logo) */
+    .brand-ha {
+      font-weight: 800;
+      color: #41bdf5;
+      text-shadow: 0 0 14px rgba(65, 189, 245, 0.35);
+    }
+
+    .brand-vc {
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .nav-brand .brand-vc {
+      color: var(--neon-blue);
+      text-shadow: none;
+    }
+
+    .nav-brand:hover .brand-vc {
+      color: var(--neon-cyan);
     }
 
     .nav-links { display: flex; gap: 24px; }
@@ -449,22 +478,65 @@ EOF</code></pre>
       font-size: clamp(2.4rem, 5vw, 3.8rem);
       font-weight: 800;
       letter-spacing: -0.03em;
-      margin-bottom: 12px;
+      margin-bottom: 28px;
       color: #fff;
     }
 
-    .hero-subtitle {
-      font-size: 1.3rem;
-      color: var(--neon-blue);
-      font-weight: 500;
-      margin-bottom: 16px;
+    .hero-wordmark {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: baseline;
+      justify-content: center;
+      gap: 0.35em 0.5em;
+    }
+
+    .hero-wordmark .brand-ha {
+      font-size: 1em;
+    }
+
+    .hero-wordmark .brand-vc {
+      font-size: 1em;
+      background: var(--gradient);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .hero-wordmark-sep {
+      display: none;
+    }
+
+    @media (min-width: 520px) {
+      .hero-wordmark {
+        flex-wrap: nowrap;
+        gap: 0.5em;
+      }
+
+      .hero-wordmark-sep {
+        display: inline-block;
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: var(--text-dim);
+        opacity: 0.5;
+        align-self: center;
+        flex-shrink: 0;
+      }
     }
 
     .hero-desc {
-      max-width: 560px;
+      max-width: 640px;
       margin: 0 auto 36px;
-      color: var(--text-dim);
-      font-size: 1.05rem;
+      color: var(--text);
+      font-size: clamp(1.08rem, 2.2vw, 1.22rem);
+      line-height: 1.55;
+      font-weight: 500;
+    }
+
+    .hero-desc strong {
+      color: var(--neon-cyan);
+      font-weight: 600;
     }
 
     .hero-buttons { display: flex; gap: 14px; justify-content: center; margin-bottom: 40px; }
