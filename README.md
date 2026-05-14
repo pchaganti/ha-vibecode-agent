@@ -95,7 +95,8 @@ The MCP server gives your AI IDE a standard way to talk to Home Assistant.
 
 The Agent gives it safe, native access to Home Assistant itself.
 
-Together, they replace fragile SSH-based scripting with a stable, structured and context-efficient automation layer
+**Together, they replace fragile SSH-based scripting with a stable, structured and context-efficient automation layer**
+
 ---
 
 
