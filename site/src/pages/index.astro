@@ -35,7 +35,7 @@ const base = "/home-assistant-vibecode-agent";
   <section class="hero">
     <div class="container">
       <h1 class="hero-title hero-wordmark">
-        <span class="brand-ha">Home Assistant</span><span class="brand-vc"> Vibecode Agent</span>
+        <span class="brand-ha">Home Assistant</span><span class="brand-vc">Vibecode Agent</span>
       </h1>
       <p class="hero-desc">
         <strong>Safely</strong> create and debug automations, design dashboards, tweak themes, modify configuration, and deploy changes &mdash; using natural language. Path-validated file access, YAML checks, and Git-backed rollback on every edit
@@ -456,7 +456,7 @@ EOF</code></pre>
 
     /* ── HERO ── */
     .hero {
-      padding: 110px 0 90px;
+      padding: 110px 0 58px;
       text-align: center;
       position: relative;
     }
@@ -494,6 +494,7 @@ EOF</code></pre>
 
     .hero-wordmark .brand-vc {
       font-size: 1em;
+      margin-left: 0.28em;
       background: var(--gradient);
       -webkit-background-clip: text;
       background-clip: text;
@@ -565,6 +566,11 @@ EOF</code></pre>
     .stat-badge:hover {
       border-color: rgba(0, 212, 255, 0.4);
       box-shadow: 0 0 12px rgba(0, 212, 255, 0.15);
+    }
+
+    /* Pull "Safe Home Assistant…" closer to the hero */
+    #why.section {
+      padding-top: 52px;
     }
 
     /* ── SECTIONS ── */
@@ -969,8 +975,11 @@ EOF</code></pre>
       .grid-3 { grid-template-columns: 1fr; }
       .nav-links { gap: 16px; }
       .nav-links a { font-size: 0.82rem; }
-      .hero { padding: 70px 0 60px; }
+      .hero { padding: 70px 0 48px; }
       .section { padding: 60px 0; }
+      #why.section {
+        padding-top: 36px;
+      }
       .tab-panel { padding: 24px 18px; }
       .arch-flow { font-size: 0.8rem; }
     }
