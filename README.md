@@ -49,31 +49,55 @@ Both modes provide the same core functionality. The only difference: **Add-on ma
 
 ### 🚀 How is this different from other MCP modules for Home Assistant?
 
-Most MCP integrations I've seen for Claude, Cursor, VS Code or Antigravity work only on your local machine and talk to Home Assistant over SSH and sometimes the REST API.
+# Home Assistant Agent + MCP Server
 
-For serious Home Assistant work, that's not really enough:
+Most MCP integrations for Claude, Cursor, VS Code or Antigravity run only on your local machine and talk to Home Assistant over SSH, sometimes with the REST API.
 
-Home Assistant is not just a bunch of YAML files.
-It exposes multiple internal APIs, and some of the most important ones are only available from inside HA itself over the WebSocket API.
+For serious Home Assistant work, that is not enough.
 
-When you access HA only via SSH, the AI usually has to generate and upload a helper script on every request, then execute it blindly on the host.
-Since that script can be different every time, each request is a bit of a black box — more like playing Russian roulette than doing reliable automation.
+Home Assistant is not just a set of YAML files. It exposes internal APIs, runtime state, entities, services and capabilities that are much easier and safer to access from inside Home Assistant itself.
 
-Because of that, I chose a different architecture.
+SSH-based integrations often force the AI to generate and run temporary helper scripts on every request. Since those scripts can change every time, the result is hard to predict, hard to repeat and risky to rely on.
 
-This project is **split into two modules**:
+This project uses a different architecture.
 
-**Home Assistant Agent** (this module) – runs inside (or alongside) Home Assistant,
-has native access to all relevant APIs, files and services,
-and exposes a safe, well-defined interface for external tools.
+## Architecture
 
-**Home Assistant MCP server** – runs on your computer alongside your AI IDE (Cursor, VS Code, etc.)
-and talks to the Agent over a controlled API instead of SSH hacks (installation steps below)
+The project is split into two modules:
 
-This design makes working with Home Assistant faster, more predictable, safer and repeatable.
-Your AI IDE gets exactly the actions and data it needs — through a stable API — instead of constantly inventing ad-hoc scripts and hoping they behave correctly.
+### Home Assistant Agent
 
+Runs inside, or alongside, Home Assistant.
+
+It has native access to relevant APIs, files, entities, services and runtime state, and exposes a safe, well-defined interface for external tools.
+
+### Home Assistant MCP Server
+
+Runs on your computer alongside your AI IDE, such as Cursor, VS Code, Claude Desktop or Antigravity.
+
+It talks to the Agent over a controlled API instead of relying on SSH hacks.
+
+## Why this design
+
+This makes Home Assistant automation faster, safer, more predictable and repeatable.
+
+The AI IDE gets exactly the actions and data it needs through a stable API, instead of constantly inventing ad-hoc scripts.
+
+It also improves context efficiency.
+
+Instead of loading huge YAML files, full entity dumps, logs or generated scripts into the prompt, the Agent can return only the relevant context: selected entities, services, automation fragments, validation results, errors or structured summaries.
+
+The result is less noise, fewer tokens, fewer wrong assumptions and more reliable edits.
+
+## In short
+
+The MCP server gives your AI IDE a standard way to talk to Home Assistant.
+
+The Agent gives it safe, native access to Home Assistant itself.
+
+Together, they replace fragile SSH-based scripting with a stable, structured and context-efficient automation layer
 ---
+
 
 ## ⚡ Installation (5 minutes)
 
