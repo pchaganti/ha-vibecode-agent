@@ -35,12 +35,10 @@ const base = "/home-assistant-vibecode-agent";
   <section class="hero">
     <div class="container">
       <h1 class="hero-title hero-wordmark">
-        <span class="brand-ha">Home Assistant</span>
-        <span class="hero-wordmark-sep" aria-hidden="true"></span>
-        <span class="brand-vc">Vibecode Agent</span>
+        <span class="brand-ha">Home Assistant</span><span class="brand-vc"> Vibecode Agent</span>
       </h1>
       <p class="hero-desc">
-        <strong>Safely</strong> create and debug automations, design dashboards, tweak themes, modify configuration, and deploy changes &mdash; using natural language. Path-validated file access, YAML checks, and Git-backed rollback on every edit.
+        <strong>Safely</strong> create and debug automations, design dashboards, tweak themes, modify configuration, and deploy changes &mdash; using natural language. Path-validated file access, YAML checks, and Git-backed rollback on every edit
       </p>
       <div class="hero-buttons">
         <a href="#installation" class="btn btn-primary">Get Started</a>
@@ -487,7 +485,7 @@ EOF</code></pre>
       flex-wrap: wrap;
       align-items: baseline;
       justify-content: center;
-      gap: 0.35em 0.5em;
+      gap: 0;
     }
 
     .hero-wordmark .brand-ha {
@@ -501,28 +499,6 @@ EOF</code></pre>
       background-clip: text;
       color: transparent;
       -webkit-text-fill-color: transparent;
-    }
-
-    .hero-wordmark-sep {
-      display: none;
-    }
-
-    @media (min-width: 520px) {
-      .hero-wordmark {
-        flex-wrap: nowrap;
-        gap: 0.5em;
-      }
-
-      .hero-wordmark-sep {
-        display: inline-block;
-        width: 6px;
-        height: 6px;
-        border-radius: 50%;
-        background: var(--text-dim);
-        opacity: 0.5;
-        align-self: center;
-        flex-shrink: 0;
-      }
     }
 
     .hero-desc {
