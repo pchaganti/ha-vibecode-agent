@@ -436,7 +436,11 @@ GET /api/hacs/repositories
 # Search repositories
 GET /api/hacs/search?query=xiaomi&category=integration
 
-# Install repository
+# Install repository (JSON body — this is what the MCP client sends)
+POST /api/hacs/install_repository
+{"repository": "AlexxIT/XiaomiGateway3", "category": "integration"}
+
+# Legacy query-string form still works
 POST /api/hacs/install_repository?repository=AlexxIT/XiaomiGateway3&category=integration
 
 # Get repository details

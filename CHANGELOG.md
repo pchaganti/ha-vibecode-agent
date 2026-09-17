@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+### HACS repository install from MCP clients
+
+**What went wrong:** `ha_hacs_install_repository` (`POST /api/hacs/install_repository`) treated `repository` as a query string. The MCP client posts JSON `{ "repository", "category" }`, so FastAPI returned 422 (`query.repository` field required) before HACS was called.
+
+**What we changed:** The endpoint now reads those fields from the JSON body and still accepts the legacy query-string form.
+
 ## [2.10.48] - 2026-08-03
 
 **Thanks:** [Dean Kleissas](https://github.com/dkleissa) for hunting down and fixing this bug in [PR #43](https://github.com/Coolver/home-assistant-vibecode-agent/pull/43).

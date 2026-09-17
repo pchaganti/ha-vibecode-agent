@@ -1,5 +1,5 @@
 """HACS API endpoints"""
-from fastapi import APIRouter, HTTPException, Depends, Query
+from fastapi import APIRouter, Body, HTTPException, Depends, Query, Request
 import logging
 import aiohttp
 import zipfile
@@ -362,9 +362,16 @@ async def list_hacs_repositories(
 
 
 @router.post("/install_repository", response_model=Response, dependencies=[Depends(verify_token)])
-async def install_hacs_repository(repository: str, category: str = "integration"):
+async def install_hacs_repository(
+    request: Request,
+    repository: Optional[str] = Body(None, description="Repository name (e.g., \"AlexxIT/XiaomiGateway3\")"),
+    category: Optional[str] = Body(None, description="Repository category: integration, theme, plugin, appdaemon, netdaemon, python_script"),
+):
     """
-    Install a repository from HACS via WebSocket
+    Install a repository from HACS via WebSocket.
+
+    MCP clients send `{ "repository": "...", "category": "..." }` as JSON body.
+    Query-string parameters are still accepted for backwards compatibility.
     
     **Parameters:**
     - repository: Repository name (e.g., "AlexxIT/XiaomiGateway3")
@@ -376,6 +383,14 @@ async def install_hacs_repository(repository: str, category: str = "integration"
     - Home Assistant may need to be restarted after installation
     - For integrations, configuration may be needed via UI
     """
+    repository = repository or request.query_params.get("repository")
+    category = category or request.query_params.get("category") or "integration"
+    if not repository:
+        raise HTTPException(
+            status_code=422,
+            detail="Field required: repository (JSON body or query string)",
+        )
+
     try:
         logger.info(f"Installing HACS repository: {repository} (category: {category})")
         
